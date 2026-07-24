@@ -1,0 +1,689 @@
+You are a senior team consisting of:
+
+• Creative Director
+• Senior UI/UX Designer
+• Brand Designer
+• Senior React Engineer
+• Senior Next.js Engineer
+• Senior Full Stack Engineer
+• Senior Motion Designer
+• Senior Shopify Developer
+• Senior Performance Engineer
+• SEO Expert
+
+Your task is to build a WORLD-CLASS luxury streetwear e-commerce website for my clothing brand.
+
+Brand Name:
+LWK
+
+Meaning:
+LOWKEY ALWAYS
+
+Brand Personality:
+Minimal.
+Luxury.
+Dark.
+Exclusive.
+Underground.
+Modern.
+Premium.
+High Fashion.
+Japanese Streetwear.
+Techwear.
+Fear of God.
+Represent.
+Cole Buxton.
+Aime Leon Dore.
+Rhude.
+Off-White.
+Yeezy.
+Alyx.
+Acne Studios.
+Stone Island.
+Balenciaga.
+
+The website should feel like a brand worth hundreds of millions of dollars.
+
+Never make it look like a Shopify template.
+
+Avoid generic ecommerce layouts.
+
+Everything should feel custom.
+
+--------------------------------------------------
+
+TECH STACK
+
+Use
+
+Next.js 15
+
+TypeScript
+
+Tailwind CSS
+
+Framer Motion
+
+GSAP
+
+Shadcn UI
+
+Lucide Icons
+
+React Hook Form
+
+Zod
+
+Lenis Smooth Scroll
+
+Embla Carousel
+
+Cloudinary ready
+
+Stripe ready
+
+Razorpay ready
+
+Shopify-ready architecture
+
+Responsive
+
+SEO optimized
+
+Accessibility compliant
+
+Server Components
+
+Image Optimization
+
+Lazy Loading
+
+Code Splitting
+
+Reusable Components
+
+Clean Folder Structure
+
+--------------------------------------------------
+
+COLOR PALETTE
+
+Primary
+
+#000000
+
+Secondary
+
+#FFFFFF
+
+Accent
+
+#D4AF37
+
+Dark Grey
+
+#1A1A1A
+
+Neutral
+
+#F5F5F5
+
+--------------------------------------------------
+
+TYPOGRAPHY
+
+Headings
+
+Neue Montreal
+General Sans
+Satoshi
+
+Body
+
+Inter
+
+Large typography
+
+Luxury spacing
+
+Lots of whitespace
+
+--------------------------------------------------
+
+WEBSITE STYLE
+
+Apple
+
+Represent Clothing
+
+Fear Of God
+
+Aime Leon Dore
+
+Nike
+
+Off White
+
+Nothing Technology
+
+Jacquemus
+
+Arc'teryx
+
+Balenciaga
+
+Minimal animations
+
+Very smooth
+
+No unnecessary colors
+
+--------------------------------------------------
+
+HOMEPAGE
+
+Create a cinematic homepage.
+
+Sections
+
+1 Hero
+
+Fullscreen
+
+Luxury editorial image/video
+
+Animated headline
+
+LOWKEY ALWAYS
+
+Premium CTA
+
+Shop Collection
+
+Explore Drop
+
+Parallax
+
+Floating typography
+
+Mouse movement
+
+2 Featured Drop
+
+Large editorial cards
+
+Hover animations
+
+Premium transitions
+
+Countdown
+
+Limited Stock
+
+3 Categories
+
+Oversized Tees
+
+Oversized Hoodies
+
+Cargo Pants
+
+Jackets
+
+Accessories
+
+Footwear
+
+4 Featured Products
+
+Luxury product cards
+
+Hover swap images
+
+Quick Add
+
+Wishlist
+
+Badges
+
+Sizes
+
+Color selection
+
+5 Brand Story
+
+Minimal
+
+Large typography
+
+Editorial layout
+
+Beautiful images
+
+Timeline
+
+6 Instagram Gallery
+
+Grid
+
+Hover effects
+
+Lightbox
+
+7 Newsletter
+
+Luxury form
+
+Animated
+
+--------------------------------------------------
+
+PRODUCT PAGE
+
+Luxury gallery
+
+Zoom
+
+360°
+
+Variants
+
+Color
+
+Size
+
+Quantity
+
+Inventory
+
+Reviews
+
+Accordion
+
+Shipping
+
+Returns
+
+Fabric
+
+Model Info
+
+Recommended Products
+
+Sticky Add to Cart
+
+--------------------------------------------------
+
+COLLECTION PAGE
+
+Advanced Filters
+
+Price
+
+Category
+
+Color
+
+Size
+
+Availability
+
+Sort
+
+Newest
+
+Price
+
+Trending
+
+Infinite Scroll
+
+--------------------------------------------------
+
+SEARCH
+
+Live search
+
+Suggestions
+
+Trending
+
+No Results state
+
+--------------------------------------------------
+
+CART
+
+Animated drawer
+
+Coupons
+
+Gift note
+
+Shipping Calculator
+
+Subtotal
+
+Tax
+
+Recommendations
+
+--------------------------------------------------
+
+CHECKOUT
+
+Luxury
+
+Multi Step
+
+Guest Checkout
+
+Secure Payment
+
+Address Validation
+
+Coupon
+
+Order Summary
+
+--------------------------------------------------
+
+ACCOUNT
+
+Login
+
+Signup
+
+Forgot Password
+
+Dashboard
+
+Orders
+
+Wishlist
+
+Addresses
+
+Settings
+
+--------------------------------------------------
+
+ADMIN PANEL
+
+Dashboard
+
+Orders
+
+Products
+
+Customers
+
+Inventory
+
+Coupons
+
+Analytics
+
+CMS
+
+Hero Editor
+
+Homepage Editor
+
+Banner Editor
+
+--------------------------------------------------
+
+ANIMATIONS
+
+GSAP
+
+Framer Motion
+
+Smooth Scroll
+
+Fade
+
+Slide
+
+Reveal
+
+Parallax
+
+Magnetic Buttons
+
+Page Transition
+
+Loading Screen
+
+Cursor Effects
+
+Scroll Progress
+
+Image Reveal
+
+--------------------------------------------------
+
+MICRO INTERACTIONS
+
+Hover
+
+Magnetic
+
+Ripple
+
+Button Glow
+
+Image Tilt
+
+Smooth Cards
+
+Animated Cursor
+
+Premium Inputs
+
+--------------------------------------------------
+
+PAGES
+
+Home
+
+Shop
+
+Collection
+
+Product
+
+About
+
+Journal
+
+Lookbook
+
+Contact
+
+FAQ
+
+Privacy
+
+Terms
+
+Shipping
+
+Returns
+
+Wishlist
+
+Cart
+
+Checkout
+
+Account
+
+404
+
+--------------------------------------------------
+
+SEO
+
+Dynamic Meta
+
+Open Graph
+
+Twitter Cards
+
+Schema.org
+
+Canonical URLs
+
+Robots
+
+Sitemap
+
+Structured Data
+
+--------------------------------------------------
+
+PERFORMANCE
+
+Lighthouse 100
+
+Responsive Images
+
+Lazy Loading
+
+Prefetch
+
+Compression
+
+Caching
+
+--------------------------------------------------
+
+RESPONSIVE
+
+Desktop
+
+Laptop
+
+Tablet
+
+Mobile
+
+Everything pixel perfect.
+
+--------------------------------------------------
+
+CMS READY
+
+Product Management
+
+Collection Management
+
+Homepage Management
+
+Blog
+
+Media Library
+
+Banner Manager
+
+--------------------------------------------------
+
+BRANDING
+
+Create a premium logo concept.
+
+Create favicon.
+
+Create monochrome branding.
+
+Packaging mockups.
+
+Hang tag.
+
+Shopping bag.
+
+Box.
+
+Sticker.
+
+Thank You Card.
+
+--------------------------------------------------
+
+COPYWRITING
+
+Luxury tone.
+
+Minimal.
+
+Confident.
+
+Exclusive.
+
+Not loud.
+
+Not cheesy.
+
+--------------------------------------------------
+
+EXAMPLE HERO
+
+LOWKEY ALWAYS
+
+Not everyone needs to know.
+
+Shop Drop →
+
+--------------------------------------------------
+
+EXAMPLE TAGLINES
+
+Silence Speaks.
+
+Built Different.
+
+Designed Quietly.
+
+Luxury Without Noise.
+
+Own Less. Wear Better.
+
+--------------------------------------------------
+
+IMPORTANT
+
+Never use placeholder sections.
+
+Generate real production-quality code.
+
+Use reusable architecture.
+
+Follow enterprise coding standards.
+
+Generate every component separately.
+
+Create every page.
+
+Create every animation.
+
+Create every API route.
+
+Create every utility.
+
+Create every hook.
+
+Create every type.
+
+Create every layout.
+
+Create every config.
+
+Create every asset placeholder.
+
+Create complete folder structure.
+
+The project should be deployable immediately on Vercel without modifications.
+
+The final result should feel like a luxury global fashion brand, not a template.
