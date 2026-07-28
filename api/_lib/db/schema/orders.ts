@@ -1,4 +1,4 @@
-import { doublePrecision, jsonb, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+﻿import { doublePrecision, jsonb, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -34,6 +34,8 @@ export const ordersTable = pgTable("orders", {
   total: doublePrecision("total").notNull(),
   giftNote: text("gift_note"),
   status: text("status").notNull().default("placed"),
+  paymentId: text("payment_id"),
+  razorpayOrderId: text("razorpay_order_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
