@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { db, newsletterSubscriptionsTable } from "../db";
-import { SubscribeNewsletterBody, SubscribeNewsletterResponse } from "../api-zod";
+import { db, newsletterSubscriptionsTable } from "../db/index.js";
+import { SubscribeNewsletterBody, SubscribeNewsletterResponse } from "../api-zod/index.js";
 
 const router: IRouter = Router();
 

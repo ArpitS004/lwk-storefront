@@ -1,6 +1,6 @@
 // One-off seed script: populates collections + products so the storefront
 // has real data to render. Run with: pnpm db:seed (after pnpm db:push).
-import { db, pool, collectionsTable, productsTable } from "./index"
+import { db, pool, collectionsTable, productsTable } from "./index.js"
 
 async function main() {
   console.log("Seeding collections...")

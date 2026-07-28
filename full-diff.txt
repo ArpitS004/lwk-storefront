@@ -1,0 +1,294 @@
+﻿diff --git a/api/_lib/api-zod/generated/types/index.ts b/api/_lib/api-zod/generated/types/index.ts
+index b463119..3f50746 100644
+--- a/api/_lib/api-zod/generated/types/index.ts
++++ b/api/_lib/api-zod/generated/types/index.ts
+@@ -6,17 +6,17 @@
+  * OpenAPI spec version: 0.1.0
+  */
+ 
+-export * from './collection';
+-export * from './contactInput';
+-export * from './contactMessage';
+-export * from './healthStatus';
+-export * from './listCollectionsParams';
+-export * from './listProductsParams';
+-export * from './newsletterInput';
+-export * from './newsletterSubscription';
+-export * from './order';
+-export * from './orderInput';
+-export * from './orderLineItem';
+-export * from './product';
+-export * from './review';
+-export * from './shippingAddress';
++export * from './collection.js';
++export * from './contactInput.js';
++export * from './contactMessage.js';
++export * from './healthStatus.js';
++export * from './listCollectionsParams.js';
++export * from './listProductsParams.js';
++export * from './newsletterInput.js';
++export * from './newsletterSubscription.js';
++export * from './order.js';
++export * from './orderInput.js';
++export * from './orderLineItem.js';
++export * from './product.js';
++export * from './review.js';
++export * from './shippingAddress.js';
+diff --git a/api/_lib/api-zod/generated/types/order.ts b/api/_lib/api-zod/generated/types/order.ts
+index 19529b5..cf7f272 100644
+--- a/api/_lib/api-zod/generated/types/order.ts
++++ b/api/_lib/api-zod/generated/types/order.ts
+@@ -5,8 +5,8 @@
+  * API specification
+  * OpenAPI spec version: 0.1.0
+  */
+-import type { OrderLineItem } from './orderLineItem';
+-import type { ShippingAddress } from './shippingAddress';
++import type { OrderLineItem } from './orderLineItem.js';
++import type { ShippingAddress } from './shippingAddress.js';
+ 
+ export interface Order {
+   id: number;
+diff --git a/api/_lib/api-zod/generated/types/orderInput.ts b/api/_lib/api-zod/generated/types/orderInput.ts
+index b14db8d..26f0295 100644
+--- a/api/_lib/api-zod/generated/types/orderInput.ts
++++ b/api/_lib/api-zod/generated/types/orderInput.ts
+@@ -5,8 +5,8 @@
+  * API specification
+  * OpenAPI spec version: 0.1.0
+  */
+-import type { OrderLineItem } from './orderLineItem';
+-import type { ShippingAddress } from './shippingAddress';
++import type { OrderLineItem } from './orderLineItem.js';
++import type { ShippingAddress } from './shippingAddress.js';
+ 
+ export interface OrderInput {
+   email: string;
+diff --git a/api/_lib/api-zod/index.ts b/api/_lib/api-zod/index.ts
+index b210acb..2213fe1 100644
+--- a/api/_lib/api-zod/index.ts
++++ b/api/_lib/api-zod/index.ts
+@@ -1,4 +1,4 @@
+-export * from "./generated/api";
+-export * from "./generated/types";
+-export * from './generated/api';
+-export * from './generated/types';
++export * from "./generated/api.js";
++export * from "./generated/types.js";
++export * from './generated/api.js';
++export * from './generated/types.js';
+diff --git a/api/_lib/app.ts b/api/_lib/app.ts
+index f4fe73d..88c924f 100644
+--- a/api/_lib/app.ts
++++ b/api/_lib/app.ts
+@@ -1,8 +1,8 @@
+ import express, { type Express } from "express";
+ import cors from "cors";
+ import pinoHttp from "pino-http";
+-import router from "./routes";
+-import { logger } from "./logger";
++import router from "./routes.js";
++import { logger } from "./logger.js";
+ 
+ const app: Express = express();
+ 
+diff --git a/api/_lib/db/index.ts b/api/_lib/db/index.ts
+index 50cbf48..6a07aef 100644
+--- a/api/_lib/db/index.ts
++++ b/api/_lib/db/index.ts
+@@ -1,6 +1,6 @@
+ import { drizzle } from "drizzle-orm/node-postgres";
+ import pg from "pg";
+-import * as schema from "./schema";
++import * as schema from "./schema.js";
+ 
+ const { Pool } = pg;
+ 
+@@ -13,4 +13,4 @@ if (!process.env.DATABASE_URL) {
+ export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+ export const db = drizzle(pool, { schema });
+ 
+-export * from "./schema";
++export * from "./schema.js";
+diff --git a/api/_lib/db/schema/index.ts b/api/_lib/db/schema/index.ts
+index 4f4e88f..b70f53c 100644
+--- a/api/_lib/db/schema/index.ts
++++ b/api/_lib/db/schema/index.ts
+@@ -1,5 +1,5 @@
+ // Export your models here. Add one export per file
+-// export * from "./posts";
++// export * from "./posts.js";
+ //
+ // Each model/table should ideally be split into different files.
+ // Each model/table should define a Drizzle table, insert schema, and types:
+@@ -17,9 +17,9 @@
+ //   export type InsertPost = z.infer<typeof insertPostSchema>;
+ //   export type Post = typeof postsTable.$inferSelect;
+ 
+-export * from "./collections";
+-export * from "./products";
+-export * from "./reviews";
+-export * from "./orders";
+-export * from "./newsletter";
+-export * from "./contact";
++export * from "./collections.js";
++export * from "./products.js";
++export * from "./reviews.js";
++export * from "./orders.js";
++export * from "./newsletter.js";
++export * from "./contact.js";
+diff --git a/api/_lib/db/seed.ts b/api/_lib/db/seed.ts
+index 3932a09..5d69d26 100644
+--- a/api/_lib/db/seed.ts
++++ b/api/_lib/db/seed.ts
+@@ -1,6 +1,6 @@
+ // One-off seed script: populates collections + products so the storefront
+ // has real data to render. Run with: pnpm db:seed (after pnpm db:push).
+-import { db, pool, collectionsTable, productsTable } from "./index"
++import { db, pool, collectionsTable, productsTable } from "./index.js"
+ 
+ async function main() {
+   console.log("Seeding collections...")
+diff --git a/api/_lib/local-server.ts b/api/_lib/local-server.ts
+index a5f226f..60316c9 100644
+--- a/api/_lib/local-server.ts
++++ b/api/_lib/local-server.ts
+@@ -2,7 +2,7 @@
+ // Express app directly and Vercel invokes it per-request ΓÇö nothing calls
+ // .listen() there. This file exists so `pnpm dev` and `pnpm dev:api` have a
+ // real server to talk to on localhost while developing.
+-import app from "./app";
++import app from "./app.js";
+ 
+ const port = Number(process.env.API_PORT ?? 8787);
+ 
+diff --git a/api/_lib/routes/collections.ts b/api/_lib/routes/collections.ts
+index 6ecbd44..5b9db11 100644
+--- a/api/_lib/routes/collections.ts
++++ b/api/_lib/routes/collections.ts
+@@ -1,12 +1,12 @@
+ import { Router, type IRouter } from "express";
+ import { desc, eq } from "drizzle-orm";
+-import { db, collectionsTable } from "../db";
++import { db, collectionsTable } from "../db.js";
+ import {
+   ListCollectionsQueryParams,
+   ListCollectionsResponse,
+   GetCollectionParams,
+   GetCollectionResponse,
+-} from "../api-zod";
++} from "../api-zod.js";
+ 
+ const router: IRouter = Router();
+ 
+diff --git a/api/_lib/routes/contact.ts b/api/_lib/routes/contact.ts
+index 641ec2d..ea48a7f 100644
+--- a/api/_lib/routes/contact.ts
++++ b/api/_lib/routes/contact.ts
+@@ -1,6 +1,6 @@
+ import { Router, type IRouter } from "express";
+-import { db, contactMessagesTable } from "../db";
+-import { SubmitContactMessageBody, SubmitContactMessageResponse } from "../api-zod";
++import { db, contactMessagesTable } from "../db.js";
++import { SubmitContactMessageBody, SubmitContactMessageResponse } from "../api-zod.js";
+ 
+ const router: IRouter = Router();
+ 
+diff --git a/api/_lib/routes/health.ts b/api/_lib/routes/health.ts
+index 133a39b..c4c3c2e 100644
+--- a/api/_lib/routes/health.ts
++++ b/api/_lib/routes/health.ts
+@@ -1,5 +1,5 @@
+ import { Router, type IRouter } from "express";
+-import { HealthCheckResponse } from "../api-zod";
++import { HealthCheckResponse } from "../api-zod.js";
+ 
+ const router: IRouter = Router();
+ 
+diff --git a/api/_lib/routes/index.ts b/api/_lib/routes/index.ts
+index 66f8ad6..ffbda46 100644
+--- a/api/_lib/routes/index.ts
++++ b/api/_lib/routes/index.ts
+@@ -1,10 +1,10 @@
+ import { Router, type IRouter } from "express";
+-import healthRouter from "./health";
+-import productsRouter from "./products";
+-import collectionsRouter from "./collections";
+-import ordersRouter from "./orders";
+-import newsletterRouter from "./newsletter";
+-import contactRouter from "./contact";
++import healthRouter from "./health.js";
++import productsRouter from "./products.js";
++import collectionsRouter from "./collections.js";
++import ordersRouter from "./orders.js";
++import newsletterRouter from "./newsletter.js";
++import contactRouter from "./contact.js";
+ 
+ const router: IRouter = Router();
+ 
+diff --git a/api/_lib/routes/newsletter.ts b/api/_lib/routes/newsletter.ts
+index adb493b..c3ccea2 100644
+--- a/api/_lib/routes/newsletter.ts
++++ b/api/_lib/routes/newsletter.ts
+@@ -1,7 +1,7 @@
+ import { Router, type IRouter } from "express";
+ import { eq } from "drizzle-orm";
+-import { db, newsletterSubscriptionsTable } from "../db";
+-import { SubscribeNewsletterBody, SubscribeNewsletterResponse } from "../api-zod";
++import { db, newsletterSubscriptionsTable } from "../db.js";
++import { SubscribeNewsletterBody, SubscribeNewsletterResponse } from "../api-zod.js";
+ 
+ const router: IRouter = Router();
+ 
+diff --git a/api/_lib/routes/orders.ts b/api/_lib/routes/orders.ts
+index da09cdc..11f7485 100644
+--- a/api/_lib/routes/orders.ts
++++ b/api/_lib/routes/orders.ts
+@@ -1,12 +1,12 @@
+ import { Router, type IRouter } from "express";
+ import { eq } from "drizzle-orm";
+-import { db, ordersTable } from "../db";
++import { db, ordersTable } from "../db.js";
+ import {
+   CreateOrderBody,
+   CreateOrderResponse,
+   GetOrderParams,
+   GetOrderResponse,
+-} from "../api-zod";
++} from "../api-zod.js";
+ 
+ const router: IRouter = Router();
+ 
+diff --git a/api/_lib/routes/products.ts b/api/_lib/routes/products.ts
+index c3721a8..fe35cab 100644
+--- a/api/_lib/routes/products.ts
++++ b/api/_lib/routes/products.ts
+@@ -1,6 +1,6 @@
+ import { Router, type IRouter } from "express";
+ import { and, asc, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
+-import { db, productsTable, reviewsTable } from "../db";
++import { db, productsTable, reviewsTable } from "../db.js";
+ import {
+   ListProductsQueryParams,
+   ListProductsResponse,
+@@ -10,7 +10,7 @@ import {
+   GetRelatedProductsResponse,
+   ListProductReviewsParams,
+   ListProductReviewsResponse,
+-} from "../api-zod";
++} from "../api-zod.js";
+ 
+ const router: IRouter = Router();
+ 
+diff --git a/api/index.ts b/api/index.ts
+index 2c6d5a5..6f3b69f 100644
+--- a/api/index.ts
++++ b/api/index.ts
+@@ -7,6 +7,6 @@
+ // vercel.json rewrites every request under /api/* to this function, and
+ // req.url still contains the full original path (e.g. "/api/products"),
+ // which is what app.use("/api", router) in _lib/app.ts expects.
+-import app from "./_lib/app";
++import app from "./_lib/app.js";
+ 
+ export default app;

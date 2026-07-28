@@ -6,17 +6,17 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export * from './collection';
-export * from './contactInput';
-export * from './contactMessage';
-export * from './healthStatus';
-export * from './listCollectionsParams';
-export * from './listProductsParams';
-export * from './newsletterInput';
-export * from './newsletterSubscription';
-export * from './order';
-export * from './orderInput';
-export * from './orderLineItem';
-export * from './product';
-export * from './review';
-export * from './shippingAddress';
+export * from './collection.js';
+export * from './contactInput.js';
+export * from './contactMessage.js';
+export * from './healthStatus.js';
+export * from './listCollectionsParams.js';
+export * from './listProductsParams.js';
+export * from './newsletterInput.js';
+export * from './newsletterSubscription.js';
+export * from './order.js';
+export * from './orderInput.js';
+export * from './orderLineItem.js';
+export * from './product.js';
+export * from './review.js';
+export * from './shippingAddress.js';

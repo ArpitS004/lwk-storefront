@@ -5,8 +5,8 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { OrderLineItem } from './orderLineItem';
-import type { ShippingAddress } from './shippingAddress';
+import type { OrderLineItem } from './orderLineItem.js';
+import type { ShippingAddress } from './shippingAddress.js';
 
 export interface OrderInput {
   email: string;

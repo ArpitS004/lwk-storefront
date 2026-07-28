@@ -2,7 +2,7 @@
 // Express app directly and Vercel invokes it per-request — nothing calls
 // .listen() there. This file exists so `pnpm dev` and `pnpm dev:api` have a
 // real server to talk to on localhost while developing.
-import app from "./app";
+import app from "./app.js";
 
 const port = Number(process.env.API_PORT ?? 8787);
 

@@ -7,6 +7,6 @@
 // vercel.json rewrites every request under /api/* to this function, and
 // req.url still contains the full original path (e.g. "/api/products"),
 // which is what app.use("/api", router) in _lib/app.ts expects.
-import app from "./_lib/app";
+import app from "./_lib/app.js";
 
 export default app;
