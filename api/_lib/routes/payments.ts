@@ -4,6 +4,7 @@ import Razorpay from "razorpay";
 import { z } from "zod";
 import { db, ordersTable } from "../db/index.js";
 import { CreateOrderBody } from "../api-zod/index.js";
+import { sendOrderConfirmationEmail } from "../email.js";
 
 const router: IRouter = Router();
 
@@ -101,6 +102,10 @@ router.post("/payments/verify", async (req, res): Promise<void> => {
       razorpayOrderId,
     })
     .returning();
+
+  sendOrderConfirmationEmail(order).catch((err) => {
+    console.error("Failed to send order confirmation email:", err);
+  });
 
   res.status(201).json(order);
 });

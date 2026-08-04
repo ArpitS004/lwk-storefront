@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Product } from '@/lib/api-client';
+import { trackEvent } from '@/lib/track';
 
 interface WishlistContextType {
   items: string[]; // store slugs
@@ -29,6 +30,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('lwk_wishlist', JSON.stringify(next));
       return next;
     });
+    trackEvent('wishlist_add', { slug });
   };
 
   const removeItem = (slug: string) => {
@@ -37,6 +39,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('lwk_wishlist', JSON.stringify(next));
       return next;
     });
+    trackEvent('wishlist_remove', { slug });
   };
 
   const hasItem = (slug: string) => items.includes(slug);

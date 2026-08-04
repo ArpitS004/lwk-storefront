@@ -6,6 +6,8 @@ import ordersRouter from "./orders.js";
 import newsletterRouter from "./newsletter.js";
 import contactRouter from "./contact.js";
 import paymentsRouter from "./payments.js";
+import eventsRouter from "./events.js";
+import automationsRouter from "./automations.js";
 
 const router: IRouter = Router();
 
@@ -16,5 +18,7 @@ router.use(ordersRouter);
 router.use(newsletterRouter);
 router.use(contactRouter);
 router.use(paymentsRouter);
+router.use(eventsRouter);
+router.use(automationsRouter);
 
 export default router;

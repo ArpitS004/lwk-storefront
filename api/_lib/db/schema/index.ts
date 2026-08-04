@@ -23,3 +23,4 @@ export * from "./reviews.js";
 export * from "./orders.js";
 export * from "./newsletter.js";
 export * from "./contact.js";
+export * from "./events.js";

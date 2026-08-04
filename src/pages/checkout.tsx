@@ -3,10 +3,11 @@ import { useCart } from "@/lib/cart"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useCreateOrder } from "@/lib/api-client"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useLocation, Link } from "wouter"
 import { Loader2 } from "lucide-react"
 import { formatPrice } from "@/lib/format"
+import { trackEvent } from "@/lib/track"
 
 export default function Checkout() {
   const { items, subtotal, clearCart } = useCart()
@@ -32,6 +33,16 @@ export default function Checkout() {
   const shipping = subtotal >= 1999 ? 0 : 99
   const tax = Math.round(subtotal * 0.18) // 18% GST
   const total = subtotal + shipping + tax
+
+  useEffect(() => {
+    if (items.length > 0) {
+      trackEvent("checkout_started", {
+        itemCount: items.reduce((acc, i) => acc + i.quantity, 0),
+        subtotal,
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   if (items.length === 0 && !createOrderMutation.isSuccess) {
     return (
@@ -81,6 +92,12 @@ export default function Checkout() {
       },
       {
         onSuccess: (order) => {
+          trackEvent("purchase_completed", {
+            orderNumber: order.orderNumber,
+            total: order.total,
+            itemCount: items.reduce((acc, i) => acc + i.quantity, 0),
+            email: formData.email,
+          })
           clearCart()
           setLocation(`/order-confirmation/${order.orderNumber}`)
         }

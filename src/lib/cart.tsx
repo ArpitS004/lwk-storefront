@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { trackEvent } from '@/lib/track';
 
 export interface CartItem {
   id: string; // unique cart line item id
@@ -56,10 +57,27 @@ export function CartProvider({ children }: { children: ReactNode }) {
       saveItems([...items, { ...item, id: crypto.randomUUID() }]);
     }
     setIsOpen(true);
+    trackEvent('add_to_cart', {
+      productId: item.productId,
+      slug: item.slug,
+      name: item.name,
+      price: item.price,
+      size: item.size,
+      color: item.color,
+      quantity: item.quantity,
+    });
   };
 
   const removeItem = (id: string) => {
+    const removed = items.find((i) => i.id === id);
     saveItems(items.filter((i) => i.id !== id));
+    if (removed) {
+      trackEvent('remove_from_cart', {
+        productId: removed.productId,
+        slug: removed.slug,
+        name: removed.name,
+      });
+    }
   };
 
   const updateQuantity = (id: string, quantity: number) => {

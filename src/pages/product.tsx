@@ -1,7 +1,7 @@
 import { Layout } from "@/components/layout"
 import { useGetProduct, useGetRelatedProducts } from "@/lib/api-client"
 import { useRoute, Link } from "wouter"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useCart } from "@/lib/cart"
 import { useWishlist } from "@/lib/wishlist"
@@ -10,6 +10,7 @@ import NotFound from "./not-found"
 import { Heart, ChevronRight, Minus, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { formatPrice } from "@/lib/format"
+import { trackEvent } from "@/lib/track"
 
 const EASE = [0.16, 1, 0.3, 1] as const
 
@@ -36,6 +37,29 @@ export default function Product() {
   // Auto-select first variant options when loaded
   if (product && !selectedColor && product.colors.length > 0) setSelectedColor(product.colors[0])
   if (product && !selectedSize && product.sizes.length > 0) setSelectedSize(product.sizes[0])
+
+  useEffect(() => {
+    if (!product) return
+    const viewStartedAt = Date.now()
+    trackEvent("product_view", {
+      productId: product.id,
+      slug: product.slug,
+      name: product.name,
+      category: product.category,
+      price: product.price,
+    })
+    return () => {
+      const timeSpentSeconds = Math.round((Date.now() - viewStartedAt) / 1000)
+      trackEvent("product_view", {
+        productId: product.id,
+        slug: product.slug,
+        name: product.name,
+        timeSpentSeconds,
+        left: true,
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product?.id])
 
   if (!isLoading && !product) return <NotFound />
 

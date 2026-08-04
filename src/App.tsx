@@ -1,7 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Route, Switch, Router as WouterRouter } from 'wouter';
+import { Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
+import { useEffect } from 'react';
 import { CartProvider } from './lib/cart';
 import { WishlistProvider } from './lib/wishlist';
+import { trackEvent } from './lib/track';
 
 import Home from './pages/home';
 import Shop from './pages/shop';
@@ -17,6 +19,16 @@ import PolicyPage from './pages/policy';
 import NotFound from './pages/not-found';
 
 const queryClient = new QueryClient();
+
+function PageViewTracker() {
+  const [location] = useLocation();
+
+  useEffect(() => {
+    trackEvent('page_view', { path: location });
+  }, [location]);
+
+  return null;
+}
 
 function Router() {
   return (
@@ -49,6 +61,7 @@ function App() {
         <CartProvider>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
             <div className="text-foreground bg-background noise" />
+            <PageViewTracker />
             <Router />
           </WouterRouter>
         </CartProvider>
