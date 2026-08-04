@@ -4,6 +4,7 @@ import { ShoppingBag, Heart, Menu, X, Search } from "lucide-react"
 import { useCart } from "@/lib/cart"
 import { useWishlist } from "@/lib/wishlist"
 import { cn } from "@/lib/utils"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = React.useState(false)
@@ -100,6 +101,7 @@ export function Navbar() {
 
         {/* Actions — right */}
         <div className="flex items-center gap-5 sm:gap-6">
+          <ThemeToggle />
           <Link
             href="/shop"
             className="hidden text-white/80 transition-colors duration-300 hover:text-white sm:flex"
@@ -150,6 +152,10 @@ export function Navbar() {
           <Link href="/wishlist">Wishlist ({wishlistItems.length})</Link>
           <Link href="/faq">FAQ</Link>
           <Link href="/contact">Contact</Link>
+          <div className="flex items-center gap-2 pt-2">
+            <ThemeToggle />
+            <span>Theme</span>
+          </div>
         </div>
       </div>
     </header>

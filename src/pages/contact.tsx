@@ -182,7 +182,7 @@ export default function Contact() {
                   rows={6}
                   value={formData.message}
                   onChange={e => setFormData({ ...formData, message: e.target.value })}
-                  className="w-full resize-none border-b border-border bg-transparent p-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary"
+                  className="w-full resize-none border border-border bg-muted/40 p-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:bg-transparent"
                 />
                 <Button type="submit" disabled={submitMessage.isPending} className="w-full">
                   {submitMessage.isPending ? (
