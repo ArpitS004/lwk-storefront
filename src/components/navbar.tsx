@@ -1,8 +1,9 @@
 import * as React from "react"
 import { Link, useLocation } from "wouter"
-import { ShoppingBag, Heart, Menu, X, Search } from "lucide-react"
+import { ShoppingBag, Heart, Menu, X, Search, User } from "lucide-react"
 import { useCart } from "@/lib/cart"
 import { useWishlist } from "@/lib/wishlist"
+import { useAuth } from "@/lib/auth"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "@/components/theme-toggle"
 
@@ -12,6 +13,7 @@ export function Navbar() {
   const [logoFailed, setLogoFailed] = React.useState(false)
   const { items: cartItems, setIsOpen: setCartOpen } = useCart()
   const { items: wishlistItems } = useWishlist()
+  const { user, loading: authLoading, logout } = useAuth()
   const [location] = useLocation()
 
   React.useEffect(() => {
@@ -102,6 +104,29 @@ export function Navbar() {
         {/* Actions — right */}
         <div className="flex items-center gap-5 sm:gap-6">
           <ThemeToggle />
+
+          {!authLoading && (
+            user ? (
+              <button
+                onClick={logout}
+                title={`Signed in as ${user.email} — click to log out`}
+                className="flex items-center gap-1.5 text-white/80 transition-colors duration-300 hover:text-white"
+              >
+                <User className="h-[18px] w-[18px]" strokeWidth={1.5} />
+                <span className="hidden text-xs tracking-wide text-white/60 sm:inline">
+                  {user.email.split("@")[0]}
+                </span>
+              </button>
+            ) : (
+              <Link
+                href="/login"
+                className="text-white/80 transition-colors duration-300 hover:text-white"
+              >
+                <User className="h-[18px] w-[18px]" strokeWidth={1.5} />
+              </Link>
+            )
+          )}
+
           <Link
             href="/shop"
             className="hidden text-white/80 transition-colors duration-300 hover:text-white sm:flex"
@@ -149,6 +174,13 @@ export function Navbar() {
           </Link>
         ))}
         <div className="mt-auto flex flex-col gap-4 text-sm uppercase tracking-widest text-white/60">
+          {user ? (
+            <button onClick={logout} className="text-left">
+              Log Out ({user.email.split("@")[0]})
+            </button>
+          ) : (
+            <Link href="/login">Sign In</Link>
+          )}
           <Link href="/wishlist">Wishlist ({wishlistItems.length})</Link>
           <Link href="/faq">FAQ</Link>
           <Link href="/contact">Contact</Link>
