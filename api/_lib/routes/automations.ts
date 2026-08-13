@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { sendCartAbandonmentEmail } from "../email.js";
+import { generateAbandonmentNudge } from "../deepseek.js";
 
 const router = Router();
 
@@ -28,7 +29,8 @@ router.post("/automations/abandoned-cart", async (req, res): Promise<void> => {
   }
 
   try {
-    await sendCartAbandonmentEmail(parsed.data.email, parsed.data.items);
+    const message = await generateAbandonmentNudge(parsed.data.items);
+    await sendCartAbandonmentEmail(parsed.data.email, parsed.data.items, message);
   } catch (err) {
     console.error("Failed to send cart abandonment email:", err);
     res.status(502).json({ error: err instanceof Error ? err.message : "Failed to send email" });

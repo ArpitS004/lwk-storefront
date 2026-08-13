@@ -30,6 +30,10 @@ export const eventsTable = pgTable("events", {
   payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
   path: text("path"), // page URL the event happened on
   referrer: text("referrer"), // document.referrer at time of event, for traffic source
+  // Filled in server-side from the session cookie when the event is fired
+  // by a logged-in visitor. This is what lets us email someone about an
+  // abandoned cart before they ever reach checkout.
+  email: text("email"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

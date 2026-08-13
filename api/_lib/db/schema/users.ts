@@ -5,8 +5,13 @@ import { z } from "zod/v4";
 export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
   email: text("email").notNull().unique(),
-  passwordHash: text("password_hash").notNull(),
+  // Nullable: accounts created via Google sign-in have no password at all.
+  passwordHash: text("password_hash"),
+  // Set for accounts created (or linked) via "Continue with Google". Unique
+  // so the same Google account can't back two different rows.
+  googleId: text("google_id").unique(),
   fullName: text("full_name"),
+  avatarUrl: text("avatar_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

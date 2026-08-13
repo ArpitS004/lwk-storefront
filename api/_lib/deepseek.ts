@@ -79,3 +79,59 @@ function buildFallbackInsight(summary: {
   }
   return `Tracked ${summary.eventCount} interactions so far with no purchase yet.`;
 }
+
+/**
+ * Generates the body copy for an abandoned-cart nudge email, personalized
+ * to the specific items left behind. Same contract as generateSegmentInsight
+ * above: always resolves, never throws, falls back to plain static copy if
+ * DeepSeek is unset, slow, or errors — an email that goes out with slightly
+ * generic copy is fine, an email that never goes out because an AI call
+ * hung is not.
+ */
+export async function generateAbandonmentNudge(items: { name: string }[]): Promise<string> {
+  const itemNames = items.map((i) => i.name).join(", ");
+  const fallback = `You left ${itemNames} in your cart. It's still there whenever you're ready.`;
+
+  const apiKey = process.env.DEEPSEEK_API_KEY;
+  if (!apiKey) return fallback;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+  try {
+    const response = await fetch(DEEPSEEK_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: "deepseek-chat",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You write a short, warm, low-key marketing nudge (1-2 sentences, under 40 words total) for a streetwear brand called LWK, reminding a shopper about item(s) still sitting in their cart. Confident, casual, no corporate tone, no emojis, no exclamation-mark overload. No preamble, no quotes — just the message body text.",
+          },
+          {
+            role: "user",
+            content: `Items left in cart: ${itemNames}.`,
+          },
+        ],
+        max_tokens: 80,
+        temperature: 0.6,
+      }),
+    });
+
+    if (!response.ok) return fallback;
+
+    const data = await response.json();
+    const text: string | undefined = data?.choices?.[0]?.message?.content?.trim();
+    return text || fallback;
+  } catch {
+    return fallback;
+  } finally {
+    clearTimeout(timeout);
+  }
+}

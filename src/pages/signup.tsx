@@ -1,6 +1,8 @@
 import { Layout } from "@/components/layout"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Separator } from "@/components/ui/separator"
+import { GoogleSignInButton } from "@/components/google-signin-button"
 import { useAuth } from "@/lib/auth"
 import { useState } from "react"
 import { useLocation, Link } from "wouter"
@@ -33,6 +35,12 @@ export default function Signup() {
       <div className="container mx-auto flex min-h-[calc(100vh-5rem)] items-center justify-center px-6 py-16">
         <div className="w-full max-w-sm">
           <h1 className="mb-8 text-3xl uppercase tracking-tighter">Create Account</h1>
+          <GoogleSignInButton />
+          <div className="my-6 flex items-center gap-3">
+            <Separator className="flex-1" />
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">or</span>
+            <Separator className="flex-1" />
+          </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
               placeholder="Full Name (optional)"

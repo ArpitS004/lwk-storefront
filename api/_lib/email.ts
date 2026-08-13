@@ -61,14 +61,17 @@ export async function sendOrderConfirmationEmail(order: Order): Promise<void> {
 }
 
 /**
- * Cart abandonment reminder. In production this would be triggered by a
- * scheduled job (e.g. Vercel Cron) checking for carts with no completed
- * order after N minutes. For now it's triggered manually via
- * POST /automations/abandoned-cart for demo purposes.
+ * Cart abandonment reminder. Triggered either automatically (a scheduled
+ * check finds a logged-in visitor's cart with no completed order after N
+ * minutes — see routes/cart-abandonment.ts) or manually via
+ * POST /automations/abandoned-cart for live demo purposes. `message` is the
+ * AI-personalized nudge body (see generateAbandonmentNudge); if omitted, a
+ * plain static line is used instead so this still works with DeepSeek unset.
  */
 export async function sendCartAbandonmentEmail(
   email: string,
-  items: { name: string; image: string }[]
+  items: { name: string; image: string }[],
+  message?: string
 ): Promise<void> {
   if (!resend) {
     console.warn(`RESEND_API_KEY not set — skipping cart abandonment email for ${email}`);
@@ -76,6 +79,7 @@ export async function sendCartAbandonmentEmail(
   }
 
   const itemNames = items.map((i) => i.name).join(", ");
+  const body = message ?? `You left ${itemNames} in your cart. It's still there whenever you're ready.`;
 
   const { error } = await resend.emails.send({
     from: fromAddress,
@@ -84,7 +88,7 @@ export async function sendCartAbandonmentEmail(
     html: `
       <div style="font-family:sans-serif; max-width:480px; margin:0 auto; color:#111;">
         <h1 style="font-size:20px; letter-spacing:0.05em; text-transform:uppercase;">Still thinking it over?</h1>
-        <p>You left ${itemNames} in your cart. It's still there whenever you're ready.</p>
+        <p>${body}</p>
         <p style="font-size:12px; color:#999; margin-top:24px;">LWK &mdash; Lowkey. Always.</p>
       </div>
     `,

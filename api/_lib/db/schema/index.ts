@@ -25,3 +25,4 @@ export * from "./newsletter.js";
 export * from "./contact.js";
 export * from "./events.js";
 export * from "./users.js";
+export * from "./cart-abandonment.js";

@@ -10,6 +10,7 @@ import eventsRouter from "./events.js";
 import automationsRouter from "./automations.js";
 import authRouter from "./auth.js";
 import segmentsRouter from "./segments.js";
+import cartAbandonmentRouter from "./cart-abandonment.js";
 
 const router = Router();
 
@@ -24,5 +25,6 @@ router.use(paymentsRouter);
 router.use(eventsRouter);
 router.use(automationsRouter);
 router.use(authRouter);
+router.use(cartAbandonmentRouter);
 
 export default router;
