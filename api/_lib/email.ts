@@ -31,7 +31,7 @@ export async function sendOrderConfirmationEmail(order: Order): Promise<void> {
     )
     .join("");
 
-  await resend.emails.send({
+  const { error } = await resend.emails.send({
     from: fromAddress,
     to: order.email,
     subject: `Your LWK order ${order.orderNumber} is confirmed`,
@@ -54,6 +54,10 @@ export async function sendOrderConfirmationEmail(order: Order): Promise<void> {
       </div>
     `,
   });
+
+  if (error) {
+    throw new Error(`Resend rejected order confirmation email: ${error.message}`);
+  }
 }
 
 /**
@@ -73,7 +77,7 @@ export async function sendCartAbandonmentEmail(
 
   const itemNames = items.map((i) => i.name).join(", ");
 
-  await resend.emails.send({
+  const { error } = await resend.emails.send({
     from: fromAddress,
     to: email,
     subject: "Your fit is still waiting.",
@@ -85,4 +89,8 @@ export async function sendCartAbandonmentEmail(
       </div>
     `,
   });
+
+  if (error) {
+    throw new Error(`Resend rejected cart abandonment email: ${error.message}`);
+  }
 }

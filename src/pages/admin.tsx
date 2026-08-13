@@ -57,6 +57,7 @@ export default function Admin() {
   const [loading, setLoading] = useState(true)
   const [sendingDemo, setSendingDemo] = useState(false)
   const [demoResult, setDemoResult] = useState<string | null>(null)
+  const [demoEmail, setDemoEmail] = useState("thelwkclothing@gmail.com")
 
   const loadData = async () => {
     setLoading(true)
@@ -81,7 +82,7 @@ export default function Admin() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: "demo@example.com",
+          email: demoEmail,
           items: [{ name: "Shadow Jacket", image: "/catalog/products/jacket-shadow.jpg" }],
         }),
       })
@@ -169,9 +170,22 @@ export default function Admin() {
                   In production, this fires automatically 30 minutes after a cart is
                   abandoned. Trigger it manually here to demo the email content live.
                 </p>
+                <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <label htmlFor="demo-email" className="text-xs uppercase tracking-widest text-muted-foreground">
+                    Send to
+                  </label>
+                  <input
+                    id="demo-email"
+                    type="email"
+                    value={demoEmail}
+                    onChange={(e) => setDemoEmail(e.target.value)}
+                    className="w-full max-w-sm border border-border bg-background px-3 py-2 text-sm sm:w-auto"
+                    placeholder="you@example.com"
+                  />
+                </div>
                 <button
                   onClick={triggerAbandonedCartDemo}
-                  disabled={sendingDemo}
+                  disabled={sendingDemo || !demoEmail}
                   className="bg-primary px-6 py-3 text-xs uppercase tracking-widest text-primary-foreground disabled:opacity-50"
                 >
                   {sendingDemo ? "Sending…" : "Send Cart Abandonment Email Now"}

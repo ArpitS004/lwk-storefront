@@ -27,7 +27,13 @@ router.post("/automations/abandoned-cart", async (req, res): Promise<void> => {
     return;
   }
 
-  await sendCartAbandonmentEmail(parsed.data.email, parsed.data.items);
+  try {
+    await sendCartAbandonmentEmail(parsed.data.email, parsed.data.items);
+  } catch (err) {
+    console.error("Failed to send cart abandonment email:", err);
+    res.status(502).json({ error: err instanceof Error ? err.message : "Failed to send email" });
+    return;
+  }
   res.status(200).json({ sent: true });
 });
 
