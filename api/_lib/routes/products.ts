@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router } from "express";
 import { and, asc, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
 import { db, productsTable, reviewsTable } from "../db/index.js";
 import {
@@ -12,7 +12,7 @@ import {
   ListProductReviewsResponse,
 } from "../api-zod/index.js";
 
-const router: IRouter = Router();
+const router = Router();
 
 router.get("/products", async (req, res): Promise<void> => {
   const parsed = ListProductsQueryParams.safeParse(req.query);

@@ -1,8 +1,8 @@
-import { Router, type IRouter } from "express";
+import { Router } from "express";
 import { db, contactMessagesTable } from "../db/index.js";
 import { SubmitContactMessageBody, SubmitContactMessageResponse } from "../api-zod/index.js";
 
-const router: IRouter = Router();
+const router = Router();
 
 router.post("/contact", async (req, res): Promise<void> => {
   const parsed = SubmitContactMessageBody.safeParse(req.body);

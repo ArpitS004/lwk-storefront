@@ -1,10 +1,10 @@
-import { Router, type IRouter } from "express";
+import { Router } from "express";
 import { sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { generateSegmentInsight } from "../deepseek.js";
 import type { CustomerSegment } from "../db/schema/events.js";
 
-const router: IRouter = Router();
+const router = Router();
 
 /**
  * Rule-based segmentation. Deliberately simple and deterministic — no ML

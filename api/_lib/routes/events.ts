@@ -1,8 +1,8 @@
-import { Router, type IRouter } from "express";
+import { Router } from "express";
 import { z } from "zod";
 import { db, eventsTable, EVENT_TYPES } from "../db/index.js";
 
-const router: IRouter = Router();
+const router = Router();
 
 const TrackEventBody = z.object({
   visitorId: z.string().min(1),

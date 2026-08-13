@@ -1,9 +1,9 @@
-import { Router, type IRouter } from "express";
+import { Router } from "express";
 import { eq } from "drizzle-orm";
 import { db, newsletterSubscriptionsTable } from "../db/index.js";
 import { SubscribeNewsletterBody, SubscribeNewsletterResponse } from "../api-zod/index.js";
 
-const router: IRouter = Router();
+const router = Router();
 
 router.post("/newsletter", async (req, res): Promise<void> => {
   const parsed = SubscribeNewsletterBody.safeParse(req.body);

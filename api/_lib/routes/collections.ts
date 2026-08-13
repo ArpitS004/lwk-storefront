@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router } from "express";
 import { desc, eq } from "drizzle-orm";
 import { db, collectionsTable } from "../db/index.js";
 import {
@@ -8,7 +8,7 @@ import {
   GetCollectionResponse,
 } from "../api-zod/index.js";
 
-const router: IRouter = Router();
+const router = Router();
 
 router.get("/collections", async (req, res): Promise<void> => {
   const parsed = ListCollectionsQueryParams.safeParse(req.query);

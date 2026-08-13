@@ -1,10 +1,10 @@
-import { Router, type IRouter } from "express";
+import { Router } from "express";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db, usersTable } from "../db/index.js";
 import { hashPassword, verifyPassword, signSession, verifySession, SESSION_COOKIE } from "../auth.js";
 
-const router: IRouter = Router();
+const router = Router();
 
 const isProduction = process.env.NODE_ENV === "production";
 

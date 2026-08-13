@@ -1,8 +1,8 @@
-import { Router, type IRouter } from "express";
+import { Router } from "express";
 import { z } from "zod";
 import { sendCartAbandonmentEmail } from "../email.js";
 
-const router: IRouter = Router();
+const router = Router();
 
 // In production this flow is triggered by a scheduled job (checking for
 // carts abandoned 30min / 24h / 72h ago). For a live demo, waiting real

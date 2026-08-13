@@ -1,10 +1,10 @@
-import { Router, type IRouter } from "express";
+import { Router } from "express";
 import { eq } from "drizzle-orm";
 import { db, ordersTable } from "../db/index.js";
 import { CreateOrderBody, CreateOrderResponse, GetOrderParams, GetOrderResponse } from "../api-zod/index.js";
 import { sendOrderConfirmationEmail } from "../email.js";
 
-const router: IRouter = Router();
+const router = Router();
 
 function generateOrderNumber(): string {
   const random = Math.random().toString(36).slice(2, 8).toUpperCase();

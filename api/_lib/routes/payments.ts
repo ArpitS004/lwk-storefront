@@ -1,4 +1,4 @@
-﻿import { Router, type IRouter } from "express";
+﻿import { Router } from "express";
 import crypto from "node:crypto";
 import Razorpay from "razorpay";
 import { z } from "zod";
@@ -6,7 +6,7 @@ import { db, ordersTable } from "../db/index.js";
 import { CreateOrderBody } from "../api-zod/index.js";
 import { sendOrderConfirmationEmail } from "../email.js";
 
-const router: IRouter = Router();
+const router = Router();
 
 const keyId = process.env.RAZORPAY_KEY_ID;
 const keySecret = process.env.RAZORPAY_KEY_SECRET;
