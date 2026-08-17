@@ -201,15 +201,25 @@ router.post("/cart-abandonment/check", async (req, res): Promise<void> => {
         continue;
       }
 
-      // Look up a real product image for each item rather than trusting
-      // whatever (possibly stale) image path the client sent, if any.
+      // Pull image, price and slug from the catalogue rather than trusting
+      // whatever the client sent — the email renders real product cards,
+      // and a stale price in a marketing email is worse than no price.
       const itemsWithImages = await Promise.all(
         cartItems.map(async (item) => {
           const [product] = await db
-            .select({ images: productsTable.images })
+            .select({
+              images: productsTable.images,
+              price: productsTable.price,
+              name: productsTable.name,
+            })
             .from(productsTable)
             .where(eq(productsTable.slug, item.slug));
-          return { name: item.name, image: product?.images?.[0] ?? "" };
+          return {
+            name: product?.name ?? item.name,
+            image: product?.images?.[0] ?? "",
+            price: product?.price,
+            slug: item.slug,
+          };
         })
       );
 

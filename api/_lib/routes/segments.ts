@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { sql } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { generateSegmentInsight } from "../deepseek.js";
+import { buildFallbackInsight, generateSegmentInsight } from "../deepseek.js";
 import { requireAdmin } from "../middleware/require-admin.js";
 import type { CustomerSegment } from "../db/schema/events.js";
 
@@ -79,8 +79,7 @@ router.get("/segments", async (_req, res): Promise<void> => {
     limit 50
   `);
 
-  const results = [];
-  for (const row of visitors.rows) {
+  const rows = visitors.rows.map((row) => {
     const counts = {
       pageViews: Number(row.page_views),
       productViews: Number(row.product_views),
@@ -88,40 +87,94 @@ router.get("/segments", async (_req, res): Promise<void> => {
       checkoutsStarted: Number(row.checkouts_started),
       purchases: Number(row.purchases),
     };
-    const segment = classify(counts);
-    const insight = await generateSegmentInsight({
-      segment,
+    return {
+      visitorId: row.visitor_id,
+      counts,
       eventCount:
         counts.pageViews + counts.productViews + counts.addToCarts + counts.checkoutsStarted + counts.purchases,
-      purchaseCount: counts.purchases,
+      segment: classify(counts),
       topProduct: row.top_product ?? undefined,
       productViewCount: row.top_product_views ? Number(row.top_product_views) : undefined,
-    });
+    };
+  });
 
+  // Reuse insight text we've already generated. This used to make one
+  // DeepSeek call per visitor, sequentially, on every single page load —
+  // measured at 34 seconds for 34 visitors, against a function timeout,
+  // and it re-billed the same text every refresh.
+  const cached = new Map<string, string>();
+  if (rows.length > 0) {
+    const existing = await db.execute<{ visitor_id: string; insight: string | null }>(sql`
+      select visitor_id, insight from customer_segments
+      where visitor_id = any(${sql.param(rows.map((r) => r.visitorId))}::text[])
+    `);
+    for (const row of existing.rows) {
+      if (row.insight) cached.set(row.visitor_id, row.insight);
+    }
+  }
+
+  // Generate only what's missing, in parallel, and cap it so one page load
+  // can never fan out into an unbounded number of AI calls. Anything over
+  // the cap gets the deterministic fallback now and a real insight on a
+  // later load.
+  const MAX_NEW_INSIGHTS_PER_REQUEST = 8;
+  const needsInsight = rows.filter((r) => !cached.has(r.visitorId));
+  const toGenerate = needsInsight.slice(0, MAX_NEW_INSIGHTS_PER_REQUEST);
+
+  if (needsInsight.length > toGenerate.length) {
+    console.info(
+      `segments: generating ${toGenerate.length} of ${needsInsight.length} missing insights this request; the rest follow on later loads.`,
+    );
+  }
+
+  const generated = await Promise.all(
+    toGenerate.map(async (r) => ({
+      visitorId: r.visitorId,
+      insight: await generateSegmentInsight({
+        segment: r.segment,
+        eventCount: r.eventCount,
+        purchaseCount: r.counts.purchases,
+        topProduct: r.topProduct,
+        productViewCount: r.productViewCount,
+      }),
+    })),
+  );
+  for (const g of generated) cached.set(g.visitorId, g.insight);
+
+  const results = rows.map((r) => ({
+    visitorId: r.visitorId,
+    segment: r.segment,
+    insight:
+      cached.get(r.visitorId) ??
+      buildFallbackInsight({
+        segment: r.segment,
+        eventCount: r.eventCount,
+        purchaseCount: r.counts.purchases,
+        topProduct: r.topProduct,
+      }),
+    counts: r.counts,
+  }));
+
+  // One statement instead of one per visitor. `insight` uses COALESCE so a
+  // row we didn't regenerate this time keeps the text it already had.
+  if (results.length > 0) {
     await db.execute(sql`
       insert into customer_segments (visitor_id, segment, insight, event_count, purchase_count, updated_at)
-      values (
-        ${row.visitor_id},
-        ${segment},
-        ${insight},
-        ${counts.pageViews + counts.productViews + counts.addToCarts + counts.checkoutsStarted + counts.purchases},
-        ${counts.purchases},
-        now()
-      )
+      select t.visitor_id, t.segment, t.insight, t.event_count, t.purchase_count, now()
+      from unnest(
+        ${sql.param(results.map((r) => r.visitorId))}::text[],
+        ${sql.param(results.map((r) => r.segment))}::text[],
+        ${sql.param(results.map((r) => (cached.has(r.visitorId) ? r.insight : null)))}::text[],
+        ${sql.param(results.map((r) => r.counts.pageViews + r.counts.productViews + r.counts.addToCarts + r.counts.checkoutsStarted + r.counts.purchases))}::int[],
+        ${sql.param(results.map((r) => r.counts.purchases))}::int[]
+      ) as t(visitor_id, segment, insight, event_count, purchase_count)
       on conflict (visitor_id) do update set
         segment = excluded.segment,
-        insight = excluded.insight,
+        insight = coalesce(excluded.insight, customer_segments.insight),
         event_count = excluded.event_count,
         purchase_count = excluded.purchase_count,
         updated_at = now()
     `);
-
-    results.push({
-      visitorId: row.visitor_id,
-      segment,
-      insight,
-      counts,
-    });
   }
 
   res.json({ visitors: results });

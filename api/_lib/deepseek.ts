@@ -65,7 +65,7 @@ export async function generateSegmentInsight(summary: {
   }
 }
 
-function buildFallbackInsight(summary: {
+export function buildFallbackInsight(summary: {
   segment: string;
   eventCount: number;
   purchaseCount: number;

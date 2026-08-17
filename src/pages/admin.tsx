@@ -141,13 +141,18 @@ export default function Admin() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          email: demoEmail,
-          items: [{ name: "Shadow Jacket", image: "/catalog/products/jacket-shadow.jpg" }],
-        }),
+        // No products specified — the server picks real in-stock items from
+        // the catalogue, so the email renders genuine photos and prices.
+        body: JSON.stringify({ email: demoEmail }),
       })
       if (res.ok) {
-        setDemoResult("Cart abandonment email sent successfully.")
+        const body = await res.json().catch(() => ({}))
+        const names: string[] = body.items ?? []
+        setDemoResult(
+          names.length > 0
+            ? `Sent to ${demoEmail} — featuring ${names.join(", ")}.`
+            : `Sent to ${demoEmail}.`,
+        )
       } else {
         const body = await res.json().catch(() => ({}))
         setDemoResult(`Failed: ${body.error ?? res.statusText}`)

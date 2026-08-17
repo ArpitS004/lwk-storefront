@@ -1,19 +1,59 @@
 import { Resend } from "resend";
-import type { Order, OrderLineItem } from "./db/index.js";
+import type { Order } from "./db/index.js";
+import { cartAbandonmentHtml, orderConfirmationHtml, type EmailProduct } from "./email-templates.js";
 
 const resendApiKey = process.env.RESEND_API_KEY;
-const fromAddress = process.env.RESEND_FROM_EMAIL ?? "LWK <onboarding@resend.dev>";
 
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
-function formatInr(amount: number): string {
-  return `\u20b9${amount.toLocaleString("en-IN")}`;
-}
+const FALLBACK_FROM = "LWK <onboarding@resend.dev>";
 
 /**
- * Sends the order confirmation email. Silently no-ops (with a console
- * warning) if RESEND_API_KEY isn't set, so local dev / demos without an
- * email provider configured don't crash checkout.
+ * Resolves the sender address, defensively.
+ *
+ * A single invisible character in RESEND_FROM_EMAIL — a non-breaking space
+ * pasted from a document, a trailing newline — makes Resend reject every
+ * send with "Invalid `from` field", which is exactly what silently blocked
+ * every email this app ever tried to send. So: normalise the whitespace,
+ * validate the shape, and fall back to a known-good literal rather than
+ * trusting the environment.
+ */
+function resolveFromAddress(): string {
+  const raw = process.env.RESEND_FROM_EMAIL;
+  if (!raw) return FALLBACK_FROM;
+
+  const cleaned = raw
+    // Any Unicode whitespace (incl. U+00A0 non-breaking space) → plain space
+    .replace(/\s+/gu, " ")
+    // Smart quotes and fullwidth angle brackets sometimes survive a paste
+    .replace(/[‘’“”]/g, "")
+    .replace(/＜/g, "<")
+    .replace(/＞/g, ">")
+    .trim();
+
+  // Accept either "email@example.com" or "Name <email@example.com>".
+  const bare = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
+  const named = /^[^<>]+<[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+>$/;
+
+  if (bare.test(cleaned) || named.test(cleaned)) return cleaned;
+
+  console.warn(
+    `RESEND_FROM_EMAIL is not a valid sender address (${JSON.stringify(raw)}) — ` +
+      `falling back to ${FALLBACK_FROM}. Expected "email@example.com" or "Name <email@example.com>".`,
+  );
+  return FALLBACK_FROM;
+}
+
+const fromAddress = resolveFromAddress();
+
+/**
+ * Order confirmation. Transactional, so it is not gated on marketing
+ * consent and carries no unsubscribe link.
+ *
+ * No-ops with a warning when RESEND_API_KEY is unset so local dev and
+ * demos without an email provider don't crash checkout. Note that this
+ * means the caller sees success — check the logs, not the response, to
+ * confirm mail actually went out.
  */
 export async function sendOrderConfirmationEmail(order: Order): Promise<void> {
   if (!resend) {
@@ -21,38 +61,11 @@ export async function sendOrderConfirmationEmail(order: Order): Promise<void> {
     return;
   }
 
-  const itemsHtml = order.items
-    .map(
-      (item: OrderLineItem) => `
-        <tr>
-          <td style="padding:8px 0;">${item.name} (${item.color} / ${item.size}) x${item.quantity}</td>
-          <td style="padding:8px 0; text-align:right;">${formatInr(item.price * item.quantity)}</td>
-        </tr>`
-    )
-    .join("");
-
   const { error } = await resend.emails.send({
     from: fromAddress,
     to: order.email,
     subject: `Your LWK order ${order.orderNumber} is confirmed`,
-    html: `
-      <div style="font-family:sans-serif; max-width:480px; margin:0 auto; color:#111;">
-        <h1 style="font-size:20px; letter-spacing:0.05em; text-transform:uppercase;">Order Confirmed</h1>
-        <p>Thanks for your order — here's the confirmation for <strong>${order.orderNumber}</strong>.</p>
-        <table style="width:100%; border-collapse:collapse; margin:16px 0;">
-          ${itemsHtml}
-          <tr>
-            <td style="padding-top:12px; border-top:1px solid #ddd; font-weight:bold;">Total</td>
-            <td style="padding-top:12px; border-top:1px solid #ddd; text-align:right; font-weight:bold;">${formatInr(order.total)}</td>
-          </tr>
-        </table>
-        <p style="font-size:13px; color:#555;">
-          Shipping to: ${order.shippingAddress.fullName}, ${order.shippingAddress.line1},
-          ${order.shippingAddress.city}, ${order.shippingAddress.state} ${order.shippingAddress.postalCode}
-        </p>
-        <p style="font-size:12px; color:#999; margin-top:24px;">LWK &mdash; Lowkey. Always.</p>
-      </div>
-    `,
+    html: orderConfirmationHtml(order),
   });
 
   if (error) {
@@ -61,35 +74,35 @@ export async function sendOrderConfirmationEmail(order: Order): Promise<void> {
 }
 
 /**
- * Cart abandonment reminder. Triggered either automatically (a scheduled
- * check finds a logged-in visitor's cart with no completed order after N
- * minutes — see routes/cart-abandonment.ts) or manually via
- * POST /automations/abandoned-cart for live demo purposes. `message` is the
- * AI-personalized nudge body (see generateAbandonmentNudge); if omitted, a
- * plain static line is used instead so this still works with DeepSeek unset.
+ * Abandoned-cart reminder. Marketing, so it requires recorded consent and
+ * must carry a working one-click opt-out.
+ *
+ * Triggered automatically by the scheduled check (routes/cart-abandonment.ts)
+ * or manually from the admin dashboard. `message` is the AI-personalised
+ * body copy (see generateAbandonmentNudge); the product photos, prices and
+ * links come from real catalogue data.
  */
 export async function sendCartAbandonmentEmail(
   email: string,
-  items: { name: string; image: string }[],
+  items: EmailProduct[],
   message?: string,
-  unsubscribeToken?: string
+  unsubscribeToken?: string,
 ): Promise<void> {
   if (!resend) {
     console.warn(`RESEND_API_KEY not set — skipping cart abandonment email for ${email}`);
     return;
   }
 
-  // This is marketing mail, so it must carry a working one-click opt-out.
-  // Without a token there is no way to build one — refuse to send rather
-  // than put marketing in someone's inbox with no way to stop it.
+  // Refuse rather than put marketing in someone's inbox with no way out.
   if (!unsubscribeToken) {
     throw new Error(
-      `Refusing to send marketing email to ${email} without an unsubscribe token.`
+      `Refusing to send marketing email to ${email} without an unsubscribe token.`,
     );
   }
 
   const itemNames = items.map((i) => i.name).join(", ");
-  const body = message ?? `You left ${itemNames} in your cart. It's still there whenever you're ready.`;
+  const body =
+    message ?? `You left ${itemNames} in your cart. It's still there whenever you're ready.`;
 
   const baseUrl = (process.env.APP_BASE_URL ?? "").replace(/\/$/, "");
   const unsubscribeUrl = `${baseUrl}/api/unsubscribe/${unsubscribeToken}`;
@@ -98,23 +111,13 @@ export async function sendCartAbandonmentEmail(
     from: fromAddress,
     to: email,
     subject: "Your fit is still waiting.",
-    // Gives Gmail and Outlook a native "Unsubscribe" control next to the
+    // Gives Gmail and Outlook a native "Unsubscribe" control beside the
     // sender name, which measurably reduces spam complaints.
     headers: {
       "List-Unsubscribe": `<${unsubscribeUrl}>`,
       "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
     },
-    html: `
-      <div style="font-family:sans-serif; max-width:480px; margin:0 auto; color:#111;">
-        <h1 style="font-size:20px; letter-spacing:0.05em; text-transform:uppercase;">Still thinking it over?</h1>
-        <p>${body}</p>
-        <p style="font-size:12px; color:#999; margin-top:24px;">LWK &mdash; Lowkey. Always.</p>
-        <p style="font-size:11px; color:#aaa; margin-top:16px; border-top:1px solid #eee; padding-top:12px;">
-          You're receiving this because you opted in to LWK emails.
-          <a href="${unsubscribeUrl}" style="color:#777;">Unsubscribe</a>
-        </p>
-      </div>
-    `,
+    html: cartAbandonmentHtml({ items, message: body, unsubscribeUrl }),
   });
 
   if (error) {
