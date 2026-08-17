@@ -13,6 +13,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "db:push": "drizzle-kit push --config ./drizzle.config.ts",
     "db:push-force": "drizzle-kit push --force --config ./drizzle.config.ts",
     "db:seed": "tsx --env-file=.env api/_lib/db/seed.ts"
@@ -102,7 +104,8 @@
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.9.3",
-    "vite": "^7.3.2"
+    "vite": "^7.3.2",
+    "vitest": "^3.2.7"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

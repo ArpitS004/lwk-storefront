@@ -1,5 +1,8 @@
 import { Layout } from "@/components/layout"
+import { useAuth } from "@/lib/auth"
 import { useEffect, useState } from "react"
+import { Link } from "wouter"
+import { Loader2 } from "lucide-react"
 
 interface SegmentVisitor {
   visitorId: string
@@ -52,27 +55,83 @@ function FunnelStat({ label, value }: { label: string; value: number }) {
 }
 
 export default function Admin() {
+  const { user, loading: authLoading } = useAuth()
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null)
   const [visitors, setVisitors] = useState<SegmentVisitor[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [sendingDemo, setSendingDemo] = useState(false)
   const [demoResult, setDemoResult] = useState<string | null>(null)
   const [demoEmail, setDemoEmail] = useState("thelwkclothing@gmail.com")
 
   const loadData = async () => {
     setLoading(true)
-    const [summaryRes, segmentsRes] = await Promise.all([
-      fetch("/api/analytics/summary").then((r) => r.json()),
-      fetch("/api/segments").then((r) => r.json()),
-    ])
-    setSummary(summaryRes)
-    setVisitors(segmentsRes.visitors ?? [])
-    setLoading(false)
+    setLoadError(null)
+    try {
+      const [summaryRes, segmentsRes] = await Promise.all([
+        fetch("/api/analytics/summary", { credentials: "include" }),
+        fetch("/api/segments", { credentials: "include" }),
+      ])
+      if (!summaryRes.ok || !segmentsRes.ok) {
+        throw new Error(
+          summaryRes.status === 403 || segmentsRes.status === 403
+            ? "Your account doesn't have admin access."
+            : "Could not load analytics.",
+        )
+      }
+      const summaryData = await summaryRes.json()
+      const segmentsData = await segmentsRes.json()
+      setSummary(summaryData)
+      setVisitors(segmentsData.visitors ?? [])
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Could not load analytics.")
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
+    if (authLoading) return
+    if (!user?.isAdmin) {
+      setLoading(false)
+      return
+    }
     loadData()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, user?.isAdmin])
+
+  // Client-side guard. The APIs enforce this server-side too — this only
+  // avoids rendering an empty dashboard shell to someone who can't use it.
+  if (authLoading) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-6 py-32 text-center">
+          <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      </Layout>
+    )
+  }
+
+  if (!user || !user.isAdmin) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-6 py-32 text-center">
+          <h1 className="mb-6 text-3xl uppercase tracking-widest">Restricted</h1>
+          <p className="mb-8 text-muted-foreground">
+            {user
+              ? "This account doesn't have admin access."
+              : "You need to sign in with an admin account to view this page."}
+          </p>
+          <Link
+            href={user ? "/" : "/login"}
+            className="border-b border-primary pb-1 text-sm uppercase tracking-widest transition-colors hover:text-muted-foreground"
+          >
+            {user ? "Return home" : "Sign in"}
+          </Link>
+        </div>
+      </Layout>
+    )
+  }
 
   const triggerAbandonedCartDemo = async () => {
     setSendingDemo(true)
@@ -81,6 +140,7 @@ export default function Admin() {
       const res = await fetch("/api/automations/abandoned-cart", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           email: demoEmail,
           items: [{ name: "Shadow Jacket", image: "/catalog/products/jacket-shadow.jpg" }],
@@ -116,6 +176,12 @@ export default function Admin() {
             Refresh
           </button>
         </div>
+
+        {loadError && (
+          <p className="mb-8 border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+            {loadError}
+          </p>
+        )}
 
         {loading ? (
           <p className="text-muted-foreground">Loading analytics…</p>
@@ -166,9 +232,14 @@ export default function Admin() {
                 AI Email Automation
               </h2>
               <div className="border border-border bg-card p-6">
-                <p className="mb-4 text-sm text-muted-foreground">
-                  In production, this fires automatically 30 minutes after a cart is
-                  abandoned. Trigger it manually here to demo the email content live.
+                <p className="mb-2 text-sm text-muted-foreground">
+                  In production, this fires automatically once a cart has sat untouched
+                  past the abandonment threshold. Trigger it manually here to demo the
+                  email content live.
+                </p>
+                <p className="mb-4 text-xs text-muted-foreground">
+                  The recipient must have a registered LWK account with marketing email
+                  switched on, otherwise this returns an error rather than sending.
                 </p>
                 <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
                   <label htmlFor="demo-email" className="text-xs uppercase tracking-widest text-muted-foreground">

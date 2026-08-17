@@ -8,14 +8,26 @@ import { useState } from "react"
 import { useLocation, Link } from "wouter"
 import { Loader2 } from "lucide-react"
 
+// The Google callback redirects here with a fixed error code rather than a
+// message, so a crafted link can't make our own login page display
+// arbitrary text. Anything unrecognised falls back to a generic line.
+const OAUTH_ERROR_MESSAGES: Record<string, string> = {
+  google_not_configured: "Google sign-in isn't set up yet. Use your email and password instead.",
+  google_cancelled: "Google sign-in was cancelled.",
+  google_bad_state: "That sign-in link expired. Please try again.",
+  google_failed: "Google sign-in didn't complete. Please try again.",
+}
+
 export default function Login() {
   const { login } = useAuth()
   const [, setLocation] = useLocation()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [error, setError] = useState<string | null>(() =>
-    new URLSearchParams(window.location.search).get("error")
-  )
+  const [error, setError] = useState<string | null>(() => {
+    const code = new URLSearchParams(window.location.search).get("error")
+    if (!code) return null
+    return OAUTH_ERROR_MESSAGES[code] ?? "Sign-in didn't complete. Please try again."
+  })
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {

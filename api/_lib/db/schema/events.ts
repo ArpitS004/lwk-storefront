@@ -8,6 +8,10 @@ import { z } from "zod/v4";
 export const EVENT_TYPES = [
   "page_view",
   "product_view",
+  // Fired when the visitor leaves a product page, carrying how long they
+  // stayed. Its own type rather than a flag on product_view: while both
+  // were "product_view", every view was counted twice in every aggregate.
+  "product_view_ended",
   "add_to_cart",
   "remove_from_cart",
   "wishlist_add",

@@ -2,6 +2,7 @@ import { Layout } from "@/components/layout"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
+import { Checkbox } from "@/components/ui/checkbox"
 import { GoogleSignInButton } from "@/components/google-signin-button"
 import { useAuth } from "@/lib/auth"
 import { useState } from "react"
@@ -14,6 +15,9 @@ export default function Signup() {
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  // Unticked by default. Consent has to be an active choice, not something
+  // someone gives by not noticing a pre-ticked box.
+  const [marketingConsent, setMarketingConsent] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -21,7 +25,7 @@ export default function Signup() {
     e.preventDefault()
     setError(null)
     setLoading(true)
-    const result = await signup(email, password, fullName || undefined)
+    const result = await signup(email, password, fullName || undefined, marketingConsent)
     setLoading(false)
     if (result.error) {
       setError(result.error)
@@ -62,6 +66,22 @@ export default function Signup() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
+            <div className="flex items-start gap-3 pt-1">
+              <Checkbox
+                id="marketing-consent"
+                checked={marketingConsent}
+                onCheckedChange={(checked) => setMarketingConsent(checked === true)}
+                className="mt-0.5"
+              />
+              <label
+                htmlFor="marketing-consent"
+                className="cursor-pointer text-xs leading-relaxed text-muted-foreground"
+              >
+                Email me about new drops and remind me if I leave something in my cart. You can
+                turn this off any time from your account or from any email we send.
+              </label>
+            </div>
+
             {error && <p className="text-sm text-destructive">{error}</p>}
             <Button type="submit" disabled={loading} className="w-full">
               {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Create Account"}

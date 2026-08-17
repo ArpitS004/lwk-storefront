@@ -2,9 +2,14 @@ import { Router } from "express";
 import { sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { generateSegmentInsight } from "../deepseek.js";
+import { requireAdmin } from "../middleware/require-admin.js";
 import type { CustomerSegment } from "../db/schema/events.js";
 
 const router = Router();
+
+// Both routes below expose the full behavioural record of every visitor.
+// Until now they were readable by anyone who guessed the URL.
+router.use(["/segments", "/analytics/summary"], requireAdmin);
 
 /**
  * Rule-based segmentation. Deliberately simple and deterministic — no ML
@@ -44,7 +49,12 @@ router.get("/segments", async (_req, res): Promise<void> => {
       select
         visitor_id,
         count(*) filter (where type = 'page_view') as page_views,
-        count(*) filter (where type = 'product_view') as product_views,
+        -- payload->>'left' excludes the historical "view ended" rows. The
+        -- product page used to fire product_view twice per visit (once on
+        -- mount, once on unmount), which double-counted every view. New
+        -- events use the distinct product_view_ended type instead; this
+        -- filter keeps already-stored rows from skewing the numbers.
+        count(*) filter (where type = 'product_view' and payload->>'left' is null) as product_views,
         count(*) filter (where type = 'add_to_cart') as add_to_carts,
         count(*) filter (where type = 'checkout_started') as checkouts_started,
         count(*) filter (where type = 'purchase_completed') as purchases
@@ -57,7 +67,9 @@ router.get("/segments", async (_req, res): Promise<void> => {
         payload->>'name' as top_product,
         count(*) over (partition by visitor_id, payload->>'name') as top_product_views
       from events
-      where type = 'product_view' and payload->>'name' is not null
+      where type = 'product_view'
+        and payload->>'name' is not null
+        and payload->>'left' is null
       order by visitor_id, count(*) over (partition by visitor_id, payload->>'name') desc
     )
     select c.*, t.top_product, t.top_product_views::text
@@ -118,7 +130,12 @@ router.get("/segments", async (_req, res): Promise<void> => {
 // GET /analytics/summary — the funnel numbers for the admin dashboard.
 router.get("/analytics/summary", async (_req, res): Promise<void> => {
   const funnel = await db.execute<{ type: string; count: string }>(sql`
-    select type, count(*) as count from events group by type
+    select type, count(*) as count
+    from events
+    -- See the note in GET /segments: historical product_view rows tagged
+    -- with payload.left are "view ended" duplicates, not real views.
+    where not (type = 'product_view' and payload->>'left' is not null)
+    group by type
   `);
 
   const counts: Record<string, number> = {};
@@ -129,7 +146,9 @@ router.get("/analytics/summary", async (_req, res): Promise<void> => {
   const topProducts = await db.execute<{ product: string; views: string }>(sql`
     select payload->>'name' as product, count(*) as views
     from events
-    where type = 'product_view' and payload->>'name' is not null
+    where type = 'product_view'
+      and payload->>'name' is not null
+      and payload->>'left' is null
     group by payload->>'name'
     order by views desc
     limit 5

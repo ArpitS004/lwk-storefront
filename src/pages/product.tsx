@@ -50,12 +50,14 @@ export default function Product() {
     })
     return () => {
       const timeSpentSeconds = Math.round((Date.now() - viewStartedAt) / 1000)
-      trackEvent("product_view", {
+      // Distinct type, not another product_view — emitting both as
+      // "product_view" double-counted every view in the analytics funnel,
+      // the top-products list, and the segmentation thresholds.
+      trackEvent("product_view_ended", {
         productId: product.id,
         slug: product.slug,
         name: product.name,
         timeSpentSeconds,
-        left: true,
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

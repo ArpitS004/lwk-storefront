@@ -8,6 +8,8 @@ import { trackEvent } from './lib/track';
 import Admin from "./pages/admin"
 import Login from "./pages/login"
 import Signup from "./pages/signup"
+import Account from "./pages/account"
+import AccountOrders from "./pages/account-orders"
 import Home from './pages/home';
 import Shop from './pages/shop';
 import Collection from './pages/collection';
@@ -39,6 +41,8 @@ function Router() {
       <Route path="/admin" component={Admin} />
       <Route path="/login" component={Login} />
       <Route path="/signup" component={Signup} />
+      <Route path="/account" component={Account} />
+      <Route path="/account/orders" component={AccountOrders} />
       <Route path="/" component={Home} />
       <Route path="/shop" component={Shop} />
       <Route path="/collections/:slug" component={Collection} />

@@ -6,6 +6,7 @@ import { useWishlist } from "@/lib/wishlist"
 import { useAuth } from "@/lib/auth"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { AccountMenu } from "@/components/account-menu"
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = React.useState(false)
@@ -107,16 +108,7 @@ export function Navbar() {
 
           {!authLoading && (
             user ? (
-              <button
-                onClick={logout}
-                title={`Signed in as ${user.email} — click to log out`}
-                className="flex items-center gap-1.5 text-white/80 transition-colors duration-300 hover:text-white"
-              >
-                <User className="h-[18px] w-[18px]" strokeWidth={1.5} />
-                <span className="hidden text-xs tracking-wide text-white/60 sm:inline">
-                  {user.email.split("@")[0]}
-                </span>
-              </button>
+              <AccountMenu />
             ) : (
               <Link
                 href="/login"
@@ -175,9 +167,14 @@ export function Navbar() {
         ))}
         <div className="mt-auto flex flex-col gap-4 text-sm uppercase tracking-widest text-white/60">
           {user ? (
-            <button onClick={logout} className="text-left">
-              Log Out ({user.email.split("@")[0]})
-            </button>
+            <>
+              <Link href="/account">Account</Link>
+              <Link href="/account/orders">Orders</Link>
+              {user.isAdmin && <Link href="/admin">Admin</Link>}
+              <button onClick={logout} className="text-left">
+                Log Out ({user.email.split("@")[0]})
+              </button>
+            </>
           ) : (
             <Link href="/login">Sign In</Link>
           )}

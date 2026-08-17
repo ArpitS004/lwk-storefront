@@ -1,27 +1,44 @@
 import { Router, type Request } from "express";
-import { and, desc, eq, gt, isNotNull, sql } from "drizzle-orm";
-import { db, eventsTable, productsTable, cartAbandonmentEmailsTable } from "../db/index.js";
+import { and, desc, eq, gt, inArray, isNotNull, sql } from "drizzle-orm";
+import { db, eventsTable, productsTable, usersTable, cartAbandonmentEmailsTable } from "../db/index.js";
 import { sendCartAbandonmentEmail } from "../email.js";
 import { generateAbandonmentNudge } from "../deepseek.js";
+import {
+  evaluateAbandonmentEligibility,
+  reconcileCart,
+  type IneligibleReason,
+} from "../abandonment-rules.js";
 
 const router = Router();
 
 const HOUR_MS = 60 * 60 * 1000;
 const MINUTE_MS = 60 * 1000;
+
 // How long a cart has to sit untouched, with no purchase, before we nudge.
 // Defaults to the real 30 minutes; override with a short value (e.g. "2")
 // for a live demo so the automated send is actually visible.
 const THRESHOLD_MINUTES = Number(process.env.ABANDONMENT_THRESHOLD_MINUTES) || 30;
-// Don't re-notify the same email more than once in this window, and don't
-// consider add-to-cart activity older than this at all (avoids emailing
-// about a cart from a week ago that was just never followed up on).
-const LOOKBACK_HOURS = 24;
+
+// Three distinct windows that happen to share a value today. Kept separate
+// so tuning one doesn't silently move the others.
+const ACTIVITY_LOOKBACK_HOURS = 24; // ignore cart activity older than this
+const RESEND_COOLDOWN_HOURS = 24; // don't nudge the same person again within this
+const ITEM_RESOLUTION_HOURS = 24; // how far back to look when rebuilding their cart
 
 function isAuthorized(req: Request): boolean {
   const secret = process.env.CRON_SECRET;
-  // If no secret is configured, allow it through (e.g. local dev) but this
-  // should always be set once a real external scheduler is wired up.
-  if (!secret) return true;
+
+  if (!secret) {
+    // Fails CLOSED in production. This endpoint triggers a mass send; if
+    // the secret is ever missing or misspelled in the deployment config,
+    // refusing every call is the safe failure, not accepting every call.
+    if (process.env.NODE_ENV === "production") {
+      console.error("CRON_SECRET is not set — refusing to run the abandonment check.");
+      return false;
+    }
+    return true; // local dev convenience only
+  }
+
   const header = req.get("authorization");
   return header === `Bearer ${secret}`;
 }
@@ -29,9 +46,18 @@ function isAuthorized(req: Request): boolean {
 /**
  * Automated abandoned-cart check. Meant to be hit on a schedule by an
  * external scheduler (Vercel Hobby's Cron only fires once/day, too slow for
- * this) — see cron-job.org setup. For each logged-in visitor whose most
- * recent cart activity is older than the threshold, with no purchase since
- * and no reminder already sent recently, sends one AI-personalized nudge.
+ * this) — see cron-job.org setup.
+ *
+ * Sends at most one AI-personalized nudge per person, and only when every
+ * one of these deterministic conditions holds:
+ *   - they are signed in, so we have a real identity rather than a guess
+ *   - they have actively opted in to marketing
+ *   - their last cart activity is older than the threshold
+ *   - they have not purchased since that activity
+ *   - they still have at least one item they didn't subsequently remove
+ *   - they haven't already been nudged inside the cooldown window
+ *
+ * The AI writes the copy. It decides none of the above.
  */
 router.post("/cart-abandonment/check", async (req, res): Promise<void> => {
   if (!isAuthorized(req)) {
@@ -41,8 +67,9 @@ router.post("/cart-abandonment/check", async (req, res): Promise<void> => {
 
   const now = Date.now();
   const thresholdCutoff = new Date(now - THRESHOLD_MINUTES * MINUTE_MS);
-  const lookbackCutoff = new Date(now - LOOKBACK_HOURS * HOUR_MS);
-  const resentCutoff = new Date(now - LOOKBACK_HOURS * HOUR_MS);
+  const activityCutoff = new Date(now - ACTIVITY_LOOKBACK_HOURS * HOUR_MS);
+  const resentCutoff = new Date(now - RESEND_COOLDOWN_HOURS * HOUR_MS);
+  const itemCutoff = new Date(now - ITEM_RESOLUTION_HOURS * HOUR_MS);
 
   // Most recent add_to_cart per email, within the lookback window.
   const cartActivity = await db
@@ -55,7 +82,7 @@ router.post("/cart-abandonment/check", async (req, res): Promise<void> => {
       and(
         eq(eventsTable.type, "add_to_cart"),
         isNotNull(eventsTable.email),
-        gt(eventsTable.createdAt, lookbackCutoff)
+        gt(eventsTable.createdAt, activityCutoff)
       )
     )
     .groupBy(eventsTable.email);
@@ -79,45 +106,98 @@ router.post("/cart-abandonment/check", async (req, res): Promise<void> => {
     .where(gt(cartAbandonmentEmailsTable.sentAt, resentCutoff));
   const recentlySentEmails = new Set(recentSends.map((r) => r.email));
 
-  const candidates = cartActivity.filter((row) => {
-    const email = row.email as string;
-    const lastAddToCart = new Date(row.lastAddToCart);
+  // Consent is the hard gate. One query for every candidate, keeping only
+  // those who actively opted in AND have an unsubscribe token — no token
+  // means no compliant way to send, so they are excluded.
+  const candidateEmails = [...new Set(cartActivity.map((r) => r.email).filter((e): e is string => Boolean(e)))];
+  const consentByEmail = new Map<string, string>(); // email -> unsubscribeToken
 
-    if (lastAddToCart > thresholdCutoff) return false; // still actively shopping, too soon
-    const lastPurchase = lastPurchaseByEmail.get(email);
-    if (lastPurchase && lastPurchase >= lastAddToCart) return false; // already bought since
-    if (recentlySentEmails.has(email)) return false; // already nudged recently
+  if (candidateEmails.length > 0) {
+    const consenting = await db
+      .select({ email: usersTable.email, unsubscribeToken: usersTable.unsubscribeToken })
+      .from(usersTable)
+      .where(
+        and(
+          inArray(usersTable.email, candidateEmails),
+          eq(usersTable.marketingConsent, true),
+          isNotNull(usersTable.unsubscribeToken)
+        )
+      );
+    for (const row of consenting) {
+      if (row.unsubscribeToken) consentByEmail.set(row.email, row.unsubscribeToken);
+    }
+  }
 
-    return true;
-  });
+  // Counted so a run that sends nothing reports a reason instead of looking
+  // silently broken.
+  const skipped: Record<IneligibleReason | "empty_cart", number> = {
+    too_soon: 0,
+    purchased_since: 0,
+    cooldown: 0,
+    no_consent: 0,
+    empty_cart: 0,
+  };
+
+  // The send/don't-send decision lives in abandonment-rules.ts as pure,
+  // unit-tested functions. This route only supplies the data.
+  const eligibilityContext = {
+    now: new Date(now),
+    thresholdMinutes: THRESHOLD_MINUTES,
+    lastPurchaseByEmail,
+    recentlySentEmails,
+    consentByEmail,
+  };
+
+  const candidates: { email: string; unsubscribeToken: string }[] = [];
+  for (const row of cartActivity) {
+    const email = row.email;
+    if (!email) continue;
+
+    const verdict = evaluateAbandonmentEligibility(
+      { email, lastAddToCart: new Date(row.lastAddToCart) },
+      eligibilityContext,
+    );
+
+    if (verdict.eligible) {
+      candidates.push({ email, unsubscribeToken: verdict.unsubscribeToken });
+    } else {
+      skipped[verdict.reason]++;
+    }
+  }
 
   const results: { email: string; sent: boolean; error?: string }[] = [];
 
   for (const candidate of candidates) {
-    const email = candidate.email as string;
+    const { email, unsubscribeToken } = candidate;
 
     try {
-      // Pull the actual items still sitting in their most recent cart
-      // activity, most recent add first, deduped by product.
-      const recentAdds = await db
-        .select({ payload: eventsTable.payload })
+      // Rebuild what is actually still in their cart. Reading add_to_cart
+      // alone would email people about items they deliberately removed, so
+      // adds and removes are replayed in chronological order.
+      const cartEvents = await db
+        .select({
+          type: eventsTable.type,
+          payload: eventsTable.payload,
+        })
         .from(eventsTable)
-        .where(and(eq(eventsTable.type, "add_to_cart"), eq(eventsTable.email, email), gt(eventsTable.createdAt, lookbackCutoff)))
+        .where(
+          and(
+            eq(eventsTable.email, email),
+            gt(eventsTable.createdAt, itemCutoff),
+            inArray(eventsTable.type, ["add_to_cart", "remove_from_cart"])
+          )
+        )
         .orderBy(desc(eventsTable.createdAt))
-        .limit(20);
+        .limit(100);
 
-      const seenSlugs = new Set<string>();
-      const cartItems: { name: string; slug: string }[] = [];
-      for (const row of recentAdds) {
-        const slug = row.payload?.slug as string | undefined;
-        const name = row.payload?.name as string | undefined;
-        if (!slug || !name || seenSlugs.has(slug)) continue;
-        seenSlugs.add(slug);
-        cartItems.push({ name, slug });
-      }
+      // Queried newest-first for the LIMIT to keep the most recent
+      // activity; reconcileCart needs oldest-first so a later remove
+      // cancels an earlier add.
+      const cartItems = reconcileCart([...cartEvents].reverse());
 
       if (cartItems.length === 0) {
-        results.push({ email, sent: false, error: "No resolvable cart items" });
+        skipped.empty_cart++;
+        results.push({ email, sent: false, error: "Cart empty after reconciling removals" });
         continue;
       }
 
@@ -134,7 +214,7 @@ router.post("/cart-abandonment/check", async (req, res): Promise<void> => {
       );
 
       const message = await generateAbandonmentNudge(itemsWithImages);
-      await sendCartAbandonmentEmail(email, itemsWithImages, message);
+      await sendCartAbandonmentEmail(email, itemsWithImages, message, unsubscribeToken);
 
       await db.insert(cartAbandonmentEmailsTable).values({
         email,
@@ -149,7 +229,12 @@ router.post("/cart-abandonment/check", async (req, res): Promise<void> => {
     }
   }
 
-  res.status(200).json({ checked: cartActivity.length, candidates: candidates.length, results });
+  res.status(200).json({
+    checked: cartActivity.length,
+    candidates: candidates.length,
+    skipped,
+    results,
+  });
 });
 
 export default router;

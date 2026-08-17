@@ -4,6 +4,7 @@
 export const EVENT_TYPES = [
   "page_view",
   "product_view",
+  "product_view_ended",
   "add_to_cart",
   "remove_from_cart",
   "wishlist_add",

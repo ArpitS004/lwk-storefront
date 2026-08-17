@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db, usersTable } from "../db/index.js";
 import { hashPassword, verifyPassword, signSession, verifySession, SESSION_COOKIE } from "../auth.js";
 import { buildGoogleAuthUrl, exchangeCodeForUserInfo, isGoogleAuthConfigured } from "../google-auth.js";
+import { createOAuthState, verifyOAuthState } from "../oauth-state.js";
 
 const router = Router();
 
@@ -18,19 +19,29 @@ const cookieOptions = {
   path: "/",
 };
 
-const OAUTH_STATE_COOKIE = "lwk_oauth_state";
-const oauthStateCookieOptions = {
-  httpOnly: true,
-  secure: isProduction,
-  sameSite: "lax" as const,
-  maxAge: 10 * 60 * 1000, // the redirect round-trip only takes seconds; 10 min is generous
-  path: "/",
-};
+/** Unguessable token for one-click unsubscribe links. */
+function newUnsubscribeToken(): string {
+  return randomBytes(24).toString("hex");
+}
+
+// Fixed error codes rather than free text in the redirect URL. Previously
+// the callback put an arbitrary message into ?error=, which the login page
+// renders — meaning anyone could craft a link that made our own UI display
+// whatever they liked. The client maps these codes to copy instead.
+const OAUTH_ERRORS = {
+  notConfigured: "google_not_configured",
+  cancelled: "google_cancelled",
+  badState: "google_bad_state",
+  failed: "google_failed",
+} as const;
 
 const SignupBody = z.object({
   email: z.string().email(),
   password: z.string().min(8, "Password must be at least 8 characters"),
   fullName: z.string().optional(),
+  // Opt-in only. Absent or false means no marketing mail, ever, until the
+  // person changes it themselves.
+  marketingConsent: z.boolean().optional(),
 });
 
 router.post("/auth/signup", async (req, res): Promise<void> => {
@@ -52,18 +63,28 @@ router.post("/auth/signup", async (req, res): Promise<void> => {
 
   const passwordHash = await hashPassword(parsed.data.password);
 
+  const consent = parsed.data.marketingConsent === true;
+
   const [user] = await db
     .insert(usersTable)
     .values({
       email: parsed.data.email,
       passwordHash,
       fullName: parsed.data.fullName ?? null,
+      marketingConsent: consent,
+      consentUpdatedAt: new Date(),
+      unsubscribeToken: newUnsubscribeToken(),
     })
     .returning();
 
   const token = signSession({ userId: user.id, email: user.email });
   res.cookie(SESSION_COOKIE, token, cookieOptions);
-  res.status(201).json({ email: user.email, fullName: user.fullName });
+  res.status(201).json({
+    email: user.email,
+    fullName: user.fullName,
+    isAdmin: user.isAdmin,
+    marketingConsent: user.marketingConsent,
+  });
 });
 
 const LoginBody = z.object({
@@ -98,7 +119,12 @@ router.post("/auth/login", async (req, res): Promise<void> => {
 
   const token = signSession({ userId: user.id, email: user.email });
   res.cookie(SESSION_COOKIE, token, cookieOptions);
-  res.json({ email: user.email, fullName: user.fullName });
+  res.json({
+    email: user.email,
+    fullName: user.fullName,
+    isAdmin: user.isAdmin,
+    marketingConsent: user.marketingConsent,
+  });
 });
 
 router.post("/auth/logout", (_req, res): void => {
@@ -118,32 +144,29 @@ router.get("/auth/google", (_req, res): void => {
     return;
   }
 
-  const state = randomBytes(24).toString("hex");
-  res.cookie(OAUTH_STATE_COOKIE, state, oauthStateCookieOptions);
-  res.redirect(buildGoogleAuthUrl(state));
+  // Signed, self-expiring state — no cookie has to survive the redirect
+  // chain, which is what broke sign-in in Safari. See oauth-state.ts.
+  res.redirect(buildGoogleAuthUrl(createOAuthState()));
 });
 
 router.get("/auth/google/callback", async (req, res): Promise<void> => {
   const redirectHome = () => res.redirect("/");
-  const redirectWithError = (message: string) => res.redirect(`/login?error=${encodeURIComponent(message)}`);
+  const redirectWithError = (code: string) => res.redirect(`/login?error=${code}`);
 
   if (!isGoogleAuthConfigured()) {
-    redirectWithError("Google sign-in isn't configured yet.");
+    redirectWithError(OAUTH_ERRORS.notConfigured);
     return;
   }
 
   const { code, state, error: googleError } = req.query as Record<string, string | undefined>;
 
   if (googleError) {
-    redirectWithError("Google sign-in was cancelled.");
+    redirectWithError(OAUTH_ERRORS.cancelled);
     return;
   }
 
-  const expectedState = req.cookies?.[OAUTH_STATE_COOKIE];
-  res.clearCookie(OAUTH_STATE_COOKIE, { path: "/" });
-
-  if (!code || !state || !expectedState || state !== expectedState) {
-    redirectWithError("Google sign-in session expired — please try again.");
+  if (!code || !verifyOAuthState(state)) {
+    redirectWithError(OAUTH_ERRORS.badState);
     return;
   }
 
@@ -159,7 +182,12 @@ router.get("/auth/google/callback", async (req, res): Promise<void> => {
       if (!existing.googleId) {
         [user] = await db
           .update(usersTable)
-          .set({ googleId: profile.googleId, avatarUrl: profile.picture ?? existing.avatarUrl })
+          .set({
+            googleId: profile.googleId,
+            avatarUrl: profile.picture ?? existing.avatarUrl,
+            // Backfill for accounts created before unsubscribe tokens existed.
+            unsubscribeToken: existing.unsubscribeToken ?? newUnsubscribeToken(),
+          })
           .where(eq(usersTable.id, existing.id))
           .returning();
       } else {
@@ -174,6 +202,11 @@ router.get("/auth/google/callback", async (req, res): Promise<void> => {
           googleId: profile.googleId,
           fullName: profile.name ?? null,
           avatarUrl: profile.picture ?? null,
+          // Signing in with Google is authentication, not consent to
+          // marketing. They opt in explicitly from their account page.
+          marketingConsent: false,
+          consentUpdatedAt: new Date(),
+          unsubscribeToken: newUnsubscribeToken(),
         })
         .returning();
     }
@@ -183,7 +216,7 @@ router.get("/auth/google/callback", async (req, res): Promise<void> => {
     redirectHome();
   } catch (err) {
     console.error("Google sign-in failed:", err);
-    redirectWithError("Google sign-in failed — please try again.");
+    redirectWithError(OAUTH_ERRORS.failed);
   }
 });
 
@@ -201,7 +234,13 @@ router.get("/auth/me", async (req, res): Promise<void> => {
   }
 
   const [user] = await db
-    .select({ email: usersTable.email, fullName: usersTable.fullName, avatarUrl: usersTable.avatarUrl })
+    .select({
+      email: usersTable.email,
+      fullName: usersTable.fullName,
+      avatarUrl: usersTable.avatarUrl,
+      isAdmin: usersTable.isAdmin,
+      marketingConsent: usersTable.marketingConsent,
+    })
     .from(usersTable)
     .where(eq(usersTable.id, session.userId));
 
@@ -211,6 +250,42 @@ router.get("/auth/me", async (req, res): Promise<void> => {
   }
 
   res.json(user);
+});
+
+// Lets a signed-in customer turn marketing email on or off from their
+// account page. Every change stamps consent_updated_at, so there is always
+// an answer to "when did this person opt in".
+const ConsentBody = z.object({ marketingConsent: z.boolean() });
+
+router.patch("/auth/consent", async (req, res): Promise<void> => {
+  const token = req.cookies?.[SESSION_COOKIE];
+  const session = token ? verifySession(token) : null;
+  if (!session) {
+    res.status(401).json({ error: "Not logged in" });
+    return;
+  }
+
+  const parsed = ConsentBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid input" });
+    return;
+  }
+
+  const [updated] = await db
+    .update(usersTable)
+    .set({
+      marketingConsent: parsed.data.marketingConsent,
+      consentUpdatedAt: new Date(),
+    })
+    .where(eq(usersTable.id, session.userId))
+    .returning({ marketingConsent: usersTable.marketingConsent });
+
+  if (!updated) {
+    res.status(401).json({ error: "Account no longer exists" });
+    return;
+  }
+
+  res.json(updated);
 });
 
 export default router;

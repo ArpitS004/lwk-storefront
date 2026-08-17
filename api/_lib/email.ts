@@ -71,25 +71,48 @@ export async function sendOrderConfirmationEmail(order: Order): Promise<void> {
 export async function sendCartAbandonmentEmail(
   email: string,
   items: { name: string; image: string }[],
-  message?: string
+  message?: string,
+  unsubscribeToken?: string
 ): Promise<void> {
   if (!resend) {
     console.warn(`RESEND_API_KEY not set — skipping cart abandonment email for ${email}`);
     return;
   }
 
+  // This is marketing mail, so it must carry a working one-click opt-out.
+  // Without a token there is no way to build one — refuse to send rather
+  // than put marketing in someone's inbox with no way to stop it.
+  if (!unsubscribeToken) {
+    throw new Error(
+      `Refusing to send marketing email to ${email} without an unsubscribe token.`
+    );
+  }
+
   const itemNames = items.map((i) => i.name).join(", ");
   const body = message ?? `You left ${itemNames} in your cart. It's still there whenever you're ready.`;
+
+  const baseUrl = (process.env.APP_BASE_URL ?? "").replace(/\/$/, "");
+  const unsubscribeUrl = `${baseUrl}/api/unsubscribe/${unsubscribeToken}`;
 
   const { error } = await resend.emails.send({
     from: fromAddress,
     to: email,
     subject: "Your fit is still waiting.",
+    // Gives Gmail and Outlook a native "Unsubscribe" control next to the
+    // sender name, which measurably reduces spam complaints.
+    headers: {
+      "List-Unsubscribe": `<${unsubscribeUrl}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    },
     html: `
       <div style="font-family:sans-serif; max-width:480px; margin:0 auto; color:#111;">
         <h1 style="font-size:20px; letter-spacing:0.05em; text-transform:uppercase;">Still thinking it over?</h1>
         <p>${body}</p>
         <p style="font-size:12px; color:#999; margin-top:24px;">LWK &mdash; Lowkey. Always.</p>
+        <p style="font-size:11px; color:#aaa; margin-top:16px; border-top:1px solid #eee; padding-top:12px;">
+          You're receiving this because you opted in to LWK emails.
+          <a href="${unsubscribeUrl}" style="color:#777;">Unsubscribe</a>
+        </p>
       </div>
     `,
   });

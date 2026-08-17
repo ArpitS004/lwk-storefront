@@ -16,9 +16,19 @@ function generateOrderNumber(): string {
 // tracking can be demoed) before Razorpay is fully configured. Once
 // RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET are set, orders should instead be
 // created via POST /payments/verify, which only creates an order after a
-// real Razorpay payment signature has been verified. This route stays as
-// a manual fallback but should not be relied on for real transactions.
+// real Razorpay payment signature has been verified.
+//
+// Gated behind ALLOW_UNPAID_ORDERS because, unguarded, this route lets any
+// caller create order records and trigger a confirmation email to any
+// address. Set it to false the moment real payments go live.
 router.post("/orders", async (req, res): Promise<void> => {
+  if (process.env.ALLOW_UNPAID_ORDERS !== "true") {
+    res.status(403).json({
+      error: "Unpaid order creation is disabled. Complete checkout through the payment flow.",
+    });
+    return;
+  }
+
   const parsed = CreateOrderBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
