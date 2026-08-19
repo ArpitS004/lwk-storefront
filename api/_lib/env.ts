@@ -61,6 +61,13 @@ export const env = {
   GOOGLE_CLIENT_SECRET: optional("GOOGLE_CLIENT_SECRET"),
   RESEND_API_KEY: optional("RESEND_API_KEY"),
   RESEND_FROM_EMAIL: optional("RESEND_FROM_EMAIL"),
+
+  // Free alternative to Resend, used when both are set. Google itself
+  // sends the mail, so it authenticates properly and reaches any
+  // recipient — no verified domain needed. 500 recipients/day.
+  GMAIL_USER: optional("GMAIL_USER"),
+  GMAIL_APP_PASSWORD: optional("GMAIL_APP_PASSWORD"),
+  GMAIL_FROM_NAME: optional("GMAIL_FROM_NAME"),
   DEEPSEEK_API_KEY: optional("DEEPSEEK_API_KEY"),
   RAZORPAY_KEY_ID: optional("RAZORPAY_KEY_ID"),
   RAZORPAY_KEY_SECRET: optional("RAZORPAY_KEY_SECRET"),
@@ -81,8 +88,14 @@ export const env = {
  * obvious immediately instead of after days of debugging.
  */
 export function reportEnvStatus(log: (msg: string) => void): void {
+  const emailProvider = env.GMAIL_USER && env.GMAIL_APP_PASSWORD
+    ? `gmail(${env.GMAIL_USER})`
+    : env.RESEND_API_KEY
+      ? "resend"
+      : "OFF — emails will be skipped";
+
   const status = [
-    `email(resend)=${env.RESEND_API_KEY ? "on" : "OFF — emails will be skipped"}`,
+    `email=${emailProvider}`,
     `ai(deepseek)=${env.DEEPSEEK_API_KEY ? "on" : "OFF — using fallback copy"}`,
     `google-signin=${env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.APP_BASE_URL ? "on" : "OFF"}`,
     `payments(razorpay)=${env.RAZORPAY_KEY_ID && env.RAZORPAY_KEY_SECRET ? "on" : "OFF"}`,
